@@ -1,1 +1,2973 @@
 
+
+Analyzing Neighborhoods in Mumbai, India for Starting a Restaurant
+Introduction
+Mumbai is the financial capital of India and is one of the most densely populated cities in the world. It lies on the west coast of India and attracts heavy tourism from all over the globe every year. Personally, I have been brought up in Mumbai and have loved the city from the bottom of my heart. It is one of the major hubs of the world and is extremely diverse with people from various ethnicities residing here. The multi-cultural nature of the city of Mumbai has brought along with it numerous cuisines from all over the world. The people of India generally love food and I personally love to try different cuisines and experience different flavors. Thus, the aim of this project is to study the neighborhoods in Mumbai to determine possible locations for opening a restaurant. This project can be useful for business owners and entrepreneurs who are looking to invest in a restaurant in Mumbai. The main objective of this project is to carefully analyze appropriate data and find recommendations for the stakeholders.
+
+Data Collection
+The data required for this project has been collected from multiple sources. A summary of the data required for this project is given below.
+
+Neighborhoods Data
+The data of the neighborhoods in Mumbai was scraped from https://en.wikipedia.org/wiki/List_of_neighbourhoods_in_Mumbai. The data is read into a pandas data frame using the read_html() method. The main reason for doing so is that the Wikipedia page provides a comprehensive and detailed table of the data which can easily be scraped using the read_html() method of pandas.
+
+Geographical Coordinates
+The geographical coordinates for Mumbai data has been obtained from the GeoPy library in python. This data is relevant for plotting the map of Mumbai using the Folium library in python. The geocoder library in python has been used to obtain latitude and longitude data for various neighborhoods in Mumbai. The coordinates of all neighborhoods in Mumbai are used to check the accuracy of coordinates given on Wikipedia and replace them in our data frame if the absolute difference is more than 0.001. These coordinates are then further used for plotting using the Folium library in python.
+
+Venue Data
+The venue data has been extracted using the Foursquare API. This data contains venue recommendations for all neighborhoods in Mumbai and is used to study the popular venues of different neighborhoods.
+
+Importing required libraries
+!pip install geopy
+!pip install geocoder
+!pip install folium
+
+import numpy as np
+import pandas as pd
+import json
+from geopy.geocoders import Nominatim
+import geocoder
+import requests
+import matplotlib.cm as cm
+import matplotlib.colors as colors
+from sklearn.cluster import KMeans
+import folium
+import matplotlib.pyplot as plt
+import seaborn as sns
+from pandas.io.json import json_normalize
+from sklearn.metrics import silhouette_score
+
+%matplotlib notebook
+
+print('All libraries imported.')
+Requirement already satisfied: geopy in /opt/conda/envs/Python36/lib/python3.6/site-packages (1.18.1)
+Requirement already satisfied: geographiclib<2,>=1.49 in /opt/conda/envs/Python36/lib/python3.6/site-packages (from geopy) (1.49)
+Collecting geocoder
+  Downloading https://files.pythonhosted.org/packages/4f/6b/13166c909ad2f2d76b929a4227c952630ebaf0d729f6317eb09cbceccbab/geocoder-1.38.1-py2.py3-none-any.whl (98kB)
+     |████████████████████████████████| 102kB 6.3MB/s ta 0:00:011
+Requirement already satisfied: six in /opt/conda/envs/Python36/lib/python3.6/site-packages (from geocoder) (1.12.0)
+Requirement already satisfied: click in /opt/conda/envs/Python36/lib/python3.6/site-packages (from geocoder) (7.0)
+Collecting ratelim (from geocoder)
+  Downloading https://files.pythonhosted.org/packages/f2/98/7e6d147fd16a10a5f821db6e25f192265d6ecca3d82957a4fdd592cad49c/ratelim-0.1.6-py2.py3-none-any.whl
+Requirement already satisfied: requests in /opt/conda/envs/Python36/lib/python3.6/site-packages (from geocoder) (2.21.0)
+Requirement already satisfied: future in /opt/conda/envs/Python36/lib/python3.6/site-packages (from geocoder) (0.17.1)
+Requirement already satisfied: decorator in /opt/conda/envs/Python36/lib/python3.6/site-packages (from ratelim->geocoder) (4.3.2)
+Requirement already satisfied: idna<2.9,>=2.5 in /opt/conda/envs/Python36/lib/python3.6/site-packages (from requests->geocoder) (2.8)
+Requirement already satisfied: chardet<3.1.0,>=3.0.2 in /opt/conda/envs/Python36/lib/python3.6/site-packages (from requests->geocoder) (3.0.4)
+Requirement already satisfied: urllib3<1.25,>=1.21.1 in /opt/conda/envs/Python36/lib/python3.6/site-packages (from requests->geocoder) (1.24.1)
+Requirement already satisfied: certifi>=2017.4.17 in /opt/conda/envs/Python36/lib/python3.6/site-packages (from requests->geocoder) (2020.6.20)
+Installing collected packages: ratelim, geocoder
+Successfully installed geocoder-1.38.1 ratelim-0.1.6
+Collecting folium
+  Downloading https://files.pythonhosted.org/packages/a4/f0/44e69d50519880287cc41e7c8a6acc58daa9a9acf5f6afc52bcc70f69a6d/folium-0.11.0-py2.py3-none-any.whl (93kB)
+     |████████████████████████████████| 102kB 7.7MB/s ta 0:00:011
+Collecting branca>=0.3.0 (from folium)
+  Downloading https://files.pythonhosted.org/packages/13/fb/9eacc24ba3216510c6b59a4ea1cd53d87f25ba76237d7f4393abeaf4c94e/branca-0.4.1-py3-none-any.whl
+Requirement already satisfied: numpy in /opt/conda/envs/Python36/lib/python3.6/site-packages (from folium) (1.15.4)
+Requirement already satisfied: jinja2>=2.9 in /opt/conda/envs/Python36/lib/python3.6/site-packages (from folium) (2.10)
+Requirement already satisfied: requests in /opt/conda/envs/Python36/lib/python3.6/site-packages (from folium) (2.21.0)
+Requirement already satisfied: MarkupSafe>=0.23 in /opt/conda/envs/Python36/lib/python3.6/site-packages (from jinja2>=2.9->folium) (1.1.0)
+Requirement already satisfied: idna<2.9,>=2.5 in /opt/conda/envs/Python36/lib/python3.6/site-packages (from requests->folium) (2.8)
+Requirement already satisfied: urllib3<1.25,>=1.21.1 in /opt/conda/envs/Python36/lib/python3.6/site-packages (from requests->folium) (1.24.1)
+Requirement already satisfied: certifi>=2017.4.17 in /opt/conda/envs/Python36/lib/python3.6/site-packages (from requests->folium) (2020.6.20)
+Requirement already satisfied: chardet<3.1.0,>=3.0.2 in /opt/conda/envs/Python36/lib/python3.6/site-packages (from requests->folium) (3.0.4)
+Installing collected packages: branca, folium
+Successfully installed branca-0.4.1 folium-0.11.0
+All libraries imported.
+Data Retrieval
+Scraping data from https://en.wikipedia.org/wiki/List_of_neighbourhoods_in_Mumbai and reading it into a dataframe.
+
+df = pd.read_html('https://en.wikipedia.org/wiki/List_of_neighbourhoods_in_Mumbai')[-1]
+df.rename(columns={'Area': 'Neighborhood'}, inplace=True)
+df.head(10)
+Neighborhood	Location	Latitude	Longitude
+0	Amboli	Andheri,Western Suburbs	19.129300	72.843400
+1	Chakala, Andheri	Western Suburbs	19.111388	72.860833
+2	D.N. Nagar	Andheri,Western Suburbs	19.124085	72.831373
+3	Four Bungalows	Andheri,Western Suburbs	19.124714	72.827210
+4	Lokhandwala	Andheri,Western Suburbs	19.130815	72.829270
+5	Marol	Andheri,Western Suburbs	19.119219	72.882743
+6	Sahar	Andheri,Western Suburbs	19.098889	72.867222
+7	Seven Bungalows	Andheri,Western Suburbs	19.129052	72.817018
+8	Versova	Andheri,Western Suburbs	19.120000	72.820000
+9	Mira Road	Mira-Bhayandar,Western Suburbs	19.284167	72.871111
+Data Wrangling
+Lets look at the different values for Location present in the Location column.
+
+df['Location'].value_counts()
+South Mumbai                       30
+Andheri,Western Suburbs             8
+Western Suburbs                     6
+Eastern Suburbs                     4
+Bandra,Western Suburbs              3
+Kandivali West,Western Suburbs      3
+Ghatkopar,Eastern Suburbs           3
+Mira-Bhayandar,Western Suburbs      3
+Powai,Eastern Suburbs               3
+Borivali (West),Western Suburbs     2
+Kalbadevi,South Mumbai              2
+Mumbai                              2
+Harbour Suburbs                     2
+Goregaon,Western Suburbs            2
+Vasai,Western Suburbs               2
+Khar,Western Suburbs                2
+Malad,Western Suburbs               2
+Sanctacruz,Western Suburbs          1
+Dadar,South Mumbai                  1
+Antop Hill,South Mumbai             1
+Govandi,Harbour Suburbs             1
+Fort,South Mumbai                   1
+Vile Parle,Western Suburbs          1
+Mulund,Eastern Suburbs              1
+Kurla,Eastern Suburbs               1
+Kamathipura,South Mumbai            1
+Trombay,Harbour Suburbs             1
+Kandivali East,Western Suburbs      1
+Colaba,South Mumbai                 1
+Byculla,South Mumbai                1
+Tardeo,South Mumbai                 1
+Name: Location, dtype: int64
+We can see that there are many locations that appear only once or twice. This is because the main locations like "Western Suburbs" or "South Mumbai" are being further divided by the area within these locations. Lets clean the Location column to make it easier to understand.
+
+df['Location'] = df['Location'].apply(lambda x: x.split(',')[-1])
+df.head(10)
+Neighborhood	Location	Latitude	Longitude
+0	Amboli	Western Suburbs	19.129300	72.843400
+1	Chakala, Andheri	Western Suburbs	19.111388	72.860833
+2	D.N. Nagar	Western Suburbs	19.124085	72.831373
+3	Four Bungalows	Western Suburbs	19.124714	72.827210
+4	Lokhandwala	Western Suburbs	19.130815	72.829270
+5	Marol	Western Suburbs	19.119219	72.882743
+6	Sahar	Western Suburbs	19.098889	72.867222
+7	Seven Bungalows	Western Suburbs	19.129052	72.817018
+8	Versova	Western Suburbs	19.120000	72.820000
+9	Mira Road	Western Suburbs	19.284167	72.871111
+Now lets again look at the values in Location column.
+
+df['Location'].value_counts()
+South Mumbai       39
+Western Suburbs    36
+Eastern Suburbs    12
+Harbour Suburbs     4
+Mumbai              2
+Name: Location, dtype: int64
+Now that the data is much easier to interpret, lets display the dataframe created.
+
+df
+Neighborhood	Location	Latitude	Longitude
+0	Amboli	Western Suburbs	19.129300	72.843400
+1	Chakala, Andheri	Western Suburbs	19.111388	72.860833
+2	D.N. Nagar	Western Suburbs	19.124085	72.831373
+3	Four Bungalows	Western Suburbs	19.124714	72.827210
+4	Lokhandwala	Western Suburbs	19.130815	72.829270
+5	Marol	Western Suburbs	19.119219	72.882743
+6	Sahar	Western Suburbs	19.098889	72.867222
+7	Seven Bungalows	Western Suburbs	19.129052	72.817018
+8	Versova	Western Suburbs	19.120000	72.820000
+9	Mira Road	Western Suburbs	19.284167	72.871111
+10	Bhayandar	Western Suburbs	19.290000	72.850000
+11	Uttan	Western Suburbs	19.280000	72.785000
+12	Bandstand Promenade	Western Suburbs	19.042718	72.819132
+13	Kherwadi	Western Suburbs	19.055300	72.831400
+14	Pali Hill	Western Suburbs	19.068000	72.826000
+15	I.C. Colony	Western Suburbs	19.247039	72.849830
+16	Gorai	Western Suburbs	19.250057	72.782021
+17	Dahisa	Western Suburbs	19.250069	72.859347
+18	Aarey Milk Colony	Western Suburbs	19.148493	72.881756
+19	Bangur Nagar	Western Suburbs	19.167362	72.832252
+20	Jogeshwari West	Western Suburbs	19.120000	72.850000
+21	Juhu	Western Suburbs	19.100000	72.830000
+22	Charkop	Western Suburbs	19.216182	72.830575
+23	Poisar	Western Suburbs	19.204511	72.837639
+24	Mahavir Nagar	Western Suburbs	19.211319	72.842737
+25	Thakur village	Western Suburbs	19.210206	72.872980
+26	Pali Naka	Western Suburbs	19.062742	72.829396
+27	Khar Danda	Western Suburbs	19.068598	72.840042
+28	Dindoshi	Western Suburbs	19.176382	72.864891
+29	Sunder Nagar	Western Suburbs	19.175000	72.842000
+...	...	...	...	...
+63	Dhobitalao	South Mumbai	18.943300	72.828600
+64	Dongri	South Mumbai	19.283333	72.783333
+65	Kala Ghoda	South Mumbai	18.930700	72.833100
+66	Kemps Corner	South Mumbai	18.962900	72.805400
+67	Lower Parel	South Mumbai	18.995278	72.830000
+68	Mahalaxmi	South Mumbai	18.983333	72.800000
+69	Mahim	South Mumbai	19.035000	72.840000
+70	Malabar Hill	South Mumbai	18.950000	72.795000
+71	Marine Drive	South Mumbai	18.944000	72.823000
+72	Marine Lines	South Mumbai	18.944700	72.824400
+73	Mumbai Central	South Mumbai	18.969700	72.819400
+74	Nariman Point	South Mumbai	18.926000	72.823000
+75	Prabhadevi	South Mumbai	19.016600	72.829500
+76	Sion	South Mumbai	19.040000	72.860000
+77	Walkeshwar	South Mumbai	18.947596	72.795957
+78	Worli	South Mumbai	19.000000	72.815000
+79	C.G.S. colony	South Mumbai	19.016378	72.856629
+80	Dagdi Chawl	South Mumbai	18.977129	72.829131
+81	Navy Nagar	South Mumbai	18.901200	72.810100
+82	Hindu colony	South Mumbai	19.020841	19.020841
+83	Ballard Estate	South Mumbai	18.950000	72.840000
+84	Chira Bazaar	South Mumbai	18.948140	72.825462
+85	Fanas Wadi	South Mumbai	18.951811	72.825309
+86	Chor Bazaar	South Mumbai	18.960321	72.827176
+87	Matunga	South Mumbai	19.017980	72.844763
+88	Parel	South Mumbai	18.990000	72.840000
+89	Gowalia Tank	South Mumbai	18.962450	72.809703
+90	Dava Bazaar	South Mumbai	18.946882	72.831362
+91	Dharavi	Mumbai	19.040208	72.850850
+92	Thane	Mumbai	19.200000	72.970000
+93 rows × 4 columns
+
+Although the data we gathered contained latitude and longitude information, we can reconfirm these coordinates using Geocoder.
+
+df['Latitude1'] = None
+df['Longitude1'] = None
+
+for i, neigh in enumerate(df['Neighborhood']):
+    lat_lng_coords = None
+    
+    while(lat_lng_coords is None):
+        g = geocoder.arcgis('{}, Mumbai, India'.format(neigh))
+        lat_lng_coords = g.latlng
+    
+    if lat_lng_coords:
+        latitude = lat_lng_coords[0]
+        longitude = lat_lng_coords[1]
+    
+    df.loc[i, 'Latitude1'] = latitude
+    df.loc[i, 'Longitude1'] = longitude
+
+df.head(10)
+Neighborhood	Location	Latitude	Longitude	Latitude1	Longitude1
+0	Amboli	Western Suburbs	19.129300	72.843400	19.1291	72.8464
+1	Chakala, Andheri	Western Suburbs	19.111388	72.860833	19.1084	72.8623
+2	D.N. Nagar	Western Suburbs	19.124085	72.831373	19.1251	72.8325
+3	Four Bungalows	Western Suburbs	19.124714	72.827210	19.1263	72.8243
+4	Lokhandwala	Western Suburbs	19.130815	72.829270	19.1432	72.8249
+5	Marol	Western Suburbs	19.119219	72.882743	19.1191	72.8828
+6	Sahar	Western Suburbs	19.098889	72.867222	19.1027	72.8626
+7	Seven Bungalows	Western Suburbs	19.129052	72.817018	19.1315	72.8165
+8	Versova	Western Suburbs	19.120000	72.820000	19.1377	72.8135
+9	Mira Road	Western Suburbs	19.284167	72.871111	19.2657	72.8707
+We can create new columns to see the difference between coordinate values obtained from wikipedia and those obtained from geocoder. We will take the absolute difference between these values and store them in our dataframe.
+
+df['Latdiff'] = abs(df['Latitude'] - df['Latitude1'])
+df['Longdiff'] = abs(df['Longitude'] - df['Longitude1'])
+df.head(10)
+Neighborhood	Location	Latitude	Longitude	Latitude1	Longitude1	Latdiff	Longdiff
+0	Amboli	Western Suburbs	19.129300	72.843400	19.1291	72.8464	0.00024	0.00304
+1	Chakala, Andheri	Western Suburbs	19.111388	72.860833	19.1084	72.8623	0.003028	0.001497
+2	D.N. Nagar	Western Suburbs	19.124085	72.831373	19.1251	72.8325	0.000965	0.001107
+3	Four Bungalows	Western Suburbs	19.124714	72.827210	19.1263	72.8243	0.001606	0.00288
+4	Lokhandwala	Western Suburbs	19.130815	72.829270	19.1432	72.8249	0.012345	0.0044
+5	Marol	Western Suburbs	19.119219	72.882743	19.1191	72.8828	0.000169	6.7e-05
+6	Sahar	Western Suburbs	19.098889	72.867222	19.1027	72.8626	0.00376476	0.00464166
+7	Seven Bungalows	Western Suburbs	19.129052	72.817018	19.1315	72.8165	0.00240802	0.000558001
+8	Versova	Western Suburbs	19.120000	72.820000	19.1377	72.8135	0.01769	0.00652
+9	Mira Road	Western Suburbs	19.284167	72.871111	19.2657	72.8707	0.0184624	0.000418149
+We can see that the latitude and longitudes from wikipedia and geocoder are very similar, yet there are some differences. We will replace the values with the coordinates obtained from geocoder if the absolute difference is more than 0.001.
+
+df.loc[df.Latdiff>0.001, 'Latitude'] = df.loc[df.Latdiff>0.001, 'Latitude1']
+df.loc[df.Longdiff>0.001, 'Longitude'] = df.loc[df.Longdiff>0.001, 'Longitude1']
+df.head(10)
+Neighborhood	Location	Latitude	Longitude	Latitude1	Longitude1	Latdiff	Longdiff
+0	Amboli	Western Suburbs	19.1293	72.8464	19.1291	72.8464	0.00024	0.00304
+1	Chakala, Andheri	Western Suburbs	19.1084	72.8623	19.1084	72.8623	0.003028	0.001497
+2	D.N. Nagar	Western Suburbs	19.1241	72.8325	19.1251	72.8325	0.000965	0.001107
+3	Four Bungalows	Western Suburbs	19.1263	72.8243	19.1263	72.8243	0.001606	0.00288
+4	Lokhandwala	Western Suburbs	19.1432	72.8249	19.1432	72.8249	0.012345	0.0044
+5	Marol	Western Suburbs	19.1192	72.8827	19.1191	72.8828	0.000169	6.7e-05
+6	Sahar	Western Suburbs	19.1027	72.8626	19.1027	72.8626	0.00376476	0.00464166
+7	Seven Bungalows	Western Suburbs	19.1315	72.817	19.1315	72.8165	0.00240802	0.000558001
+8	Versova	Western Suburbs	19.1377	72.8135	19.1377	72.8135	0.01769	0.00652
+9	Mira Road	Western Suburbs	19.2657	72.8711	19.2657	72.8707	0.0184624	0.000418149
+In order to confirm if values have actually been replaced we can use the where method. Values with NaN means those values have not been replaced.
+
+df.where(df['Latitude']==df['Latitude1'])
+Neighborhood	Location	Latitude	Longitude	Latitude1	Longitude1	Latdiff	Longdiff
+0	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+1	Chakala, Andheri	Western Suburbs	19.1084	72.8623	19.1084	72.8623	0.003028	0.001497
+2	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+3	Four Bungalows	Western Suburbs	19.1263	72.8243	19.1263	72.8243	0.001606	0.00288
+4	Lokhandwala	Western Suburbs	19.1432	72.8249	19.1432	72.8249	0.012345	0.0044
+5	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+6	Sahar	Western Suburbs	19.1027	72.8626	19.1027	72.8626	0.00376476	0.00464166
+7	Seven Bungalows	Western Suburbs	19.1315	72.817	19.1315	72.8165	0.00240802	0.000558001
+8	Versova	Western Suburbs	19.1377	72.8135	19.1377	72.8135	0.01769	0.00652
+9	Mira Road	Western Suburbs	19.2657	72.8711	19.2657	72.8707	0.0184624	0.000418149
+10	Bhayandar	Western Suburbs	19.3074	72.8518	19.3074	72.8518	0.01743	0.00184
+11	Uttan	Western Suburbs	26.8663	80.9388	26.8663	80.9388	7.58634	8.15384
+12	Bandstand Promenade	Western Suburbs	19.0458	72.8191	19.0458	72.8195	0.003102	0.000348
+13	Kherwadi	Western Suburbs	19.0595	72.8455	19.0595	72.8455	0.00422	0.01411
+14	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+15	I.C. Colony	Western Suburbs	19.2492	72.8498	19.2492	72.8502	0.002131	0.0004
+16	Gorai	Western Suburbs	19.2409	72.7841	19.2409	72.7841	0.009207	0.002089
+17	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+18	Aarey Milk Colony	Western Suburbs	19.1661	72.8594	19.1661	72.8594	0.017657	0.022346
+19	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+20	Jogeshwari West	Western Suburbs	19.1412	72.8433	19.1412	72.8433	0.02116	0.00668
+21	Juhu	Western Suburbs	19.0149	72.8452	19.0149	72.8452	0.08508	0.01522
+22	Charkop	Western Suburbs	19.2087	72.8261	19.2087	72.8261	0.007522	0.004455
+23	Poisar	Western Suburbs	19.2116	72.8527	19.2116	72.8527	0.007039	0.015081
+24	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+25	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+26	Pali Naka	Western Suburbs	19.0617	72.8294	19.0617	72.8298	0.00107729	0.000375487
+27	Khar Danda	Western Suburbs	19.0843	72.8269	19.0843	72.8269	0.015652	0.013172
+28	Dindoshi	Western Suburbs	19.1686	72.8804	19.1686	72.8804	0.007772	0.015469
+29	Sunder Nagar	Western Suburbs	19.015	72.8385	19.015	72.8385	0.16001	0.00355
+...	...	...	...	...	...	...	...	...
+63	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+64	Dongri	South Mumbai	18.9602	72.8377	18.9602	72.8377	0.323123	0.054387
+65	Kala Ghoda	South Mumbai	18.9272	72.8331	18.9272	72.8328	0.00346	0.00031
+66	Kemps Corner	South Mumbai	18.9647	72.8054	18.9647	72.8045	0.00176	0.00087
+67	Lower Parel	South Mumbai	18.9981	72.8281	18.9981	72.8281	0.002862	0.00188
+68	Mahalaxmi	South Mumbai	18.9469	72.8289	18.9469	72.8289	0.036473	0.02889
+69	Mahim	South Mumbai	19.0407	72.8431	19.0407	72.8431	0.00573	0.00305
+70	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+71	Marine Drive	South Mumbai	18.9467	72.8246	18.9467	72.8246	0.00266	0.00156
+72	Marine Lines	South Mumbai	18.9434	72.8232	18.9434	72.8232	0.00127	0.00121
+73	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+74	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+75	Prabhadevi	South Mumbai	19.0142	72.8278	19.0142	72.8278	0.0024	0.00174
+76	Sion	South Mumbai	19.0434	72.8633	19.0434	72.8633	0.00341	0.00332
+77	Walkeshwar	South Mumbai	18.9501	72.7998	18.9501	72.7998	0.002524	0.003843
+78	Worli	South Mumbai	19.0074	72.8169	19.0074	72.8169	0.00744	0.00188
+79	C.G.S. colony	South Mumbai	19.1389	72.9382	19.1389	72.9382	0.122532	0.081541
+80	Dagdi Chawl	South Mumbai	19.0978	72.8443	19.0978	72.8443	0.120691	0.015159
+81	Navy Nagar	South Mumbai	18.906	72.8155	18.906	72.8155	0.00483	0.00535
+82	Hindu colony	South Mumbai	19.0197	72.8474	19.0197	72.8474	0.001111	53.8265
+83	Ballard Estate	South Mumbai	18.9355	72.84	18.9355	72.8394	0.01451	0.00059
+84	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+85	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+86	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+87	Matunga	South Mumbai	19.0272	72.8559	19.0272	72.8559	0.00922	0.011127
+88	Parel	South Mumbai	18.9957	72.84	18.9957	72.8391	0.0057	0.00087
+89	Gowalia Tank	South Mumbai	18.9645	72.8112	18.9645	72.8112	0.00201	0.001467
+90	Dava Bazaar	South Mumbai	19.1314	72.927	19.1314	72.927	0.184518	0.095598
+91	Dharavi	Mumbai	19.0467	72.8546	19.0467	72.8546	0.006532	0.00376
+92	Thane	Mumbai	19.1409	72.8826	19.1409	72.8826	0.0590679	0.0873959
+93 rows × 8 columns
+
+We can do the same for the Longitude column.
+
+df.where(df['Longitude']==df['Longitude1'])
+Neighborhood	Location	Latitude	Longitude	Latitude1	Longitude1	Latdiff	Longdiff
+0	Amboli	Western Suburbs	19.1293	72.8464	19.1291	72.8464	0.00024	0.00304
+1	Chakala, Andheri	Western Suburbs	19.1084	72.8623	19.1084	72.8623	0.003028	0.001497
+2	D.N. Nagar	Western Suburbs	19.1241	72.8325	19.1251	72.8325	0.000965	0.001107
+3	Four Bungalows	Western Suburbs	19.1263	72.8243	19.1263	72.8243	0.001606	0.00288
+4	Lokhandwala	Western Suburbs	19.1432	72.8249	19.1432	72.8249	0.012345	0.0044
+5	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+6	Sahar	Western Suburbs	19.1027	72.8626	19.1027	72.8626	0.00376476	0.00464166
+7	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+8	Versova	Western Suburbs	19.1377	72.8135	19.1377	72.8135	0.01769	0.00652
+9	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+10	Bhayandar	Western Suburbs	19.3074	72.8518	19.3074	72.8518	0.01743	0.00184
+11	Uttan	Western Suburbs	26.8663	80.9388	26.8663	80.9388	7.58634	8.15384
+12	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+13	Kherwadi	Western Suburbs	19.0595	72.8455	19.0595	72.8455	0.00422	0.01411
+14	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+15	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+16	Gorai	Western Suburbs	19.2409	72.7841	19.2409	72.7841	0.009207	0.002089
+17	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+18	Aarey Milk Colony	Western Suburbs	19.1661	72.8594	19.1661	72.8594	0.017657	0.022346
+19	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+20	Jogeshwari West	Western Suburbs	19.1412	72.8433	19.1412	72.8433	0.02116	0.00668
+21	Juhu	Western Suburbs	19.0149	72.8452	19.0149	72.8452	0.08508	0.01522
+22	Charkop	Western Suburbs	19.2087	72.8261	19.2087	72.8261	0.007522	0.004455
+23	Poisar	Western Suburbs	19.2116	72.8527	19.2116	72.8527	0.007039	0.015081
+24	Mahavir Nagar	Western Suburbs	19.2113	72.8414	19.2109	72.8414	0.000379	0.001367
+25	Thakur village	Western Suburbs	19.2102	72.8754	19.2102	72.8754	6e-06	0.00243
+26	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+27	Khar Danda	Western Suburbs	19.0843	72.8269	19.0843	72.8269	0.015652	0.013172
+28	Dindoshi	Western Suburbs	19.1686	72.8804	19.1686	72.8804	0.007772	0.015469
+29	Sunder Nagar	Western Suburbs	19.015	72.8385	19.015	72.8385	0.16001	0.00355
+...	...	...	...	...	...	...	...	...
+63	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+64	Dongri	South Mumbai	18.9602	72.8377	18.9602	72.8377	0.323123	0.054387
+65	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+66	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+67	Lower Parel	South Mumbai	18.9981	72.8281	18.9981	72.8281	0.002862	0.00188
+68	Mahalaxmi	South Mumbai	18.9469	72.8289	18.9469	72.8289	0.036473	0.02889
+69	Mahim	South Mumbai	19.0407	72.8431	19.0407	72.8431	0.00573	0.00305
+70	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+71	Marine Drive	South Mumbai	18.9467	72.8246	18.9467	72.8246	0.00266	0.00156
+72	Marine Lines	South Mumbai	18.9434	72.8232	18.9434	72.8232	0.00127	0.00121
+73	Mumbai Central	South Mumbai	18.9697	72.8151	18.9697	72.8151	2e-05	0.00433
+74	Nariman Point	South Mumbai	18.926	72.8189	18.9259	72.8189	9e-05	0.00413
+75	Prabhadevi	South Mumbai	19.0142	72.8278	19.0142	72.8278	0.0024	0.00174
+76	Sion	South Mumbai	19.0434	72.8633	19.0434	72.8633	0.00341	0.00332
+77	Walkeshwar	South Mumbai	18.9501	72.7998	18.9501	72.7998	0.002524	0.003843
+78	Worli	South Mumbai	19.0074	72.8169	19.0074	72.8169	0.00744	0.00188
+79	C.G.S. colony	South Mumbai	19.1389	72.9382	19.1389	72.9382	0.122532	0.081541
+80	Dagdi Chawl	South Mumbai	19.0978	72.8443	19.0978	72.8443	0.120691	0.015159
+81	Navy Nagar	South Mumbai	18.906	72.8155	18.906	72.8155	0.00483	0.00535
+82	Hindu colony	South Mumbai	19.0197	72.8474	19.0197	72.8474	0.001111	53.8265
+83	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+84	Chira Bazaar	South Mumbai	18.9481	72.827	18.9477	72.827	0.00045	0.001508
+85	Fanas Wadi	South Mumbai	18.9518	72.827	18.952	72.827	0.000209	0.001671
+86	Chor Bazaar	South Mumbai	18.9603	72.8296	18.96	72.8296	0.000371	0.002424
+87	Matunga	South Mumbai	19.0272	72.8559	19.0272	72.8559	0.00922	0.011127
+88	NaN	NaN	NaN	NaN	NaN	NaN	NaN	NaN
+89	Gowalia Tank	South Mumbai	18.9645	72.8112	18.9645	72.8112	0.00201	0.001467
+90	Dava Bazaar	South Mumbai	19.1314	72.927	19.1314	72.927	0.184518	0.095598
+91	Dharavi	Mumbai	19.0467	72.8546	19.0467	72.8546	0.006532	0.00376
+92	Thane	Mumbai	19.1409	72.8826	19.1409	72.8826	0.0590679	0.0873959
+93 rows × 8 columns
+
+Now that we have the data, we can drop the columns that are no longer useful.
+
+df.drop(['Latitude1', 'Longitude1', 'Latdiff', 'Longdiff'], axis=1, inplace=True)
+df.head(10)
+Neighborhood	Location	Latitude	Longitude
+0	Amboli	Western Suburbs	19.1293	72.8464
+1	Chakala, Andheri	Western Suburbs	19.1084	72.8623
+2	D.N. Nagar	Western Suburbs	19.1241	72.8325
+3	Four Bungalows	Western Suburbs	19.1263	72.8243
+4	Lokhandwala	Western Suburbs	19.1432	72.8249
+5	Marol	Western Suburbs	19.1192	72.8827
+6	Sahar	Western Suburbs	19.1027	72.8626
+7	Seven Bungalows	Western Suburbs	19.1315	72.817
+8	Versova	Western Suburbs	19.1377	72.8135
+9	Mira Road	Western Suburbs	19.2657	72.8711
+Data Visualization
+To understand our data better, we can see how many neighborhoods are in each location.
+
+neighborhoods_mumbai = df.groupby('Location')['Neighborhood'].nunique()
+neighborhoods_mumbai
+Location
+Eastern Suburbs    12
+Harbour Suburbs     4
+Mumbai              2
+South Mumbai       39
+Western Suburbs    36
+Name: Neighborhood, dtype: int64
+We can now plot this data.
+
+fig = plt.figure(figsize=(12,8))
+
+ax = neighborhoods_mumbai.plot(kind='barh', color='lightcoral')
+ax.set_title('Number of Neighborhoods Grouped by Location in Mumbai', fontsize=20)
+ax.set_xlabel('Number of Neighborhoods', fontsize=15)
+ax.set_ylabel('Location', fontsize=15)
+ax.spines['right'].set_visible(False)
+ax.spines['top'].set_visible(False)
+ax.spines['left'].set_visible(False)
+ax.tick_params(which='major', left=False)
+
+fig.tight_layout()
+
+Clearly we can see that South Mumbai and Western Suburbs have the most number of neighborhoods. Notice how we see one of the locations as Mumbai itself? This is because the neighborhoods contained in this location are located at the outskirts of Mumbai and thus have been grouped as just Mumbai.
+
+Now lets visualize the neighborhoods on a map using Folium. First we will obtain the geographical coordinates of Mumbai using GeoPy.
+
+address = 'Mumbai, IN'
+geolocator = Nominatim()
+location = geolocator.geocode(address)
+latitude = location.latitude
+longitude = location.longitude
+print('The geograpical coordinates of Mumbai are {}, {}.'.format(latitude, longitude))
+The geograpical coordinates of Mumbai are 19.0759899, 72.8773928.
+/opt/conda/envs/Python36/lib/python3.6/site-packages/ipykernel/__main__.py:2: DeprecationWarning: Using Nominatim with the default "geopy/1.18.1" `user_agent` is strongly discouraged, as it violates Nominatim's ToS https://operations.osmfoundation.org/policies/nominatim/ and may possibly cause 403 and 429 HTTP errors. Please specify a custom `user_agent` with `Nominatim(user_agent="my-application")` or by overriding the default `user_agent`: `geopy.geocoders.options.default_user_agent = "my-application"`. In geopy 2.0 this will become an exception.
+  from ipykernel import kernelapp as app
+Now we can plot the map.
+
+map_mum = folium.Map(location=[latitude, longitude], zoom_start=10)
+
+for lat, lng, location, neighborhood in zip(df['Latitude'], df['Longitude'], df['Location'], df['Neighborhood']):
+    label = '{}, {}'.format(neighborhood, location)
+    label = folium.Popup(label, parse_html=True)
+    folium.CircleMarker(
+        [lat, lng],
+        radius=5,
+        popup=label,
+        color='red',
+        fill=True,
+        fill_color='#3186cc',
+        fill_opacity=0.7,
+        parse_html=False).add_to(map_mum)  
+    
+map_mum
+Make this Notebook Trusted to load map: File -> Trust Notebook
+Using Foursquare API
+Now we can start working with the Foursquare API to obtain venue recommendations.
+
+Lets create the Foursquare credentials first.
+
+# The code was removed by Watson Studio for sharing.
+Lets start by exploring just the first neighborhood in our dataframe using Foursquare API.
+
+neighborhood_name = df.loc[0, 'Neighborhood']
+neighborhood_lat = df.loc[0, 'Latitude']
+neighborhood_long = df.loc[0, 'Longitude']
+
+print("The neighborhood is {} and it's geographical coordinates are {} latitude and {} longitude".format(neighborhood_name,
+                                                                                                        neighborhood_lat, neighborhood_long))
+The neighborhood is Amboli and it's geographical coordinates are 19.1293 latitude and 72.84644000000003 longitude
+We will now extract the top 200 venues near Amboli with a radius of 1000m or 1km. In order to do this, we will start by creating a url.
+
+LIMIT = 200
+radius = 1000
+
+url = 'https://api.foursquare.com/v2/venues/explore?&client_id={}&client_secret={}&v={}&ll={},{}&radius={}&limit={}'.format(
+    CLIENT_ID, 
+    CLIENT_SECRET, 
+    VERSION, 
+    neighborhood_lat, 
+    neighborhood_long, 
+    radius, 
+    LIMIT)
+We can now use the GET method to get our results.
+
+results = requests.get(url).json()
+results
+{'meta': {'code': 200, 'requestId': '5f295431a3822e313dea8519'},
+ 'response': {'suggestedFilters': {'header': 'Tap to show:',
+   'filters': [{'name': 'Open now', 'key': 'openNow'}]},
+  'headerLocation': 'Jogeshwari West',
+  'headerFullLocation': 'Jogeshwari West, Mumbai',
+  'headerLocationGranularity': 'neighborhood',
+  'totalResults': 30,
+  'suggestedBounds': {'ne': {'lat': 19.13830000900001,
+    'lng': 72.85594823590122},
+   'sw': {'lat': 19.120299990999992, 'lng': 72.83693176409884}},
+  'groups': [{'type': 'Recommended Places',
+    'name': 'recommended',
+    'items': [{'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4d10d39b7177b1f7d2c75322',
+       'name': 'Cafe Arfa',
+       'location': {'address': 'S V Road',
+        'crossStreet': 'Andheri West',
+        'lat': 19.12893009094341,
+        'lng': 72.84714004510111,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.12893009094341,
+          'lng': 72.84714004510111}],
+        'distance': 84,
+        'postalCode': '400058',
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['S V Road (Andheri West)',
+         'Mumbai 400058',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d10f941735',
+         'name': 'Indian Restaurant',
+         'pluralName': 'Indian Restaurants',
+         'shortName': 'Indian',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/indian_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4d10d39b7177b1f7d2c75322-0'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4e4eb3c68877402b06b92160',
+       'name': '5 Spice , Bandra',
+       'location': {'address': 'Pali Naka, Bandra west',
+        'lat': 19.130421080343595,
+        'lng': 72.84720633881638,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.130421080343595,
+          'lng': 72.84720633881638}],
+        'distance': 148,
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Pali Naka, Bandra west',
+         'Mumbai',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d145941735',
+         'name': 'Chinese Restaurant',
+         'pluralName': 'Chinese Restaurants',
+         'shortName': 'Chinese',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/asian_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4e4eb3c68877402b06b92160-1'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '5174e2be498e39cf0d1c20cb',
+       'name': 'Shawarma Factory',
+       'location': {'address': 'Dadabhai Road',
+        'crossStreet': 'Off JP Road, Near Navrang Cinema',
+        'lat': 19.124590572173467,
+        'lng': 72.8403981304492,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.124590572173467,
+          'lng': 72.8403981304492}],
+        'distance': 823,
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Dadabhai Road (Off JP Road, Near Navrang Cinema)',
+         'Mumbai',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d10b941735',
+         'name': 'Falafel Restaurant',
+         'pluralName': 'Falafel Restaurants',
+         'shortName': 'Falafel',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/falafel_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-5174e2be498e39cf0d1c20cb-2'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '55fc3615498e141bd45da525',
+       'name': "Jaffer Bhai's Delhi Darbar",
+       'location': {'address': 'Jogeshwari West',
+        'lat': 19.137714056593047,
+        'lng': 72.84590930883026,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.137714056593047,
+          'lng': 72.84590930883026}],
+        'distance': 938,
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Jogeshwari West',
+         'Mumbai',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '54135bf5e4b08f3d2429dff4',
+         'name': 'Mughlai Restaurant',
+         'pluralName': 'Mughlai Restaurants',
+         'shortName': 'Mughlai',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/default_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-55fc3615498e141bd45da525-3'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4df9c1b3b3ad7391e9c7bf07',
+       'name': 'Narayan Sandwich',
+       'location': {'address': 'Near Chinai College',
+        'crossStreet': 'Nagardas Road',
+        'lat': 19.121397691078766,
+        'lng': 72.85027035501028,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.121397691078766,
+          'lng': 72.85027035501028}],
+        'distance': 967,
+        'postalCode': '400069',
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahrashtra',
+        'country': 'India',
+        'formattedAddress': ['Near Chinai College (Nagardas Road)',
+         'Mumbai 400069',
+         'Mahrashtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d1c5941735',
+         'name': 'Sandwich Place',
+         'pluralName': 'Sandwich Places',
+         'shortName': 'Sandwiches',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/deli_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4df9c1b3b3ad7391e9c7bf07-4'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '5247116c11d2982261defb5d',
+       'name': 'Persia Darbar',
+       'location': {'address': 'Jogeshwari West',
+        'crossStreet': 'S.V. Road',
+        'lat': 19.136951649526445,
+        'lng': 72.84682153522544,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.136951649526445,
+          'lng': 72.84682153522544}],
+        'distance': 852,
+        'postalCode': '400102',
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Jogeshwari West (S.V. Road)',
+         'Mumbai 400102',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d10f941735',
+         'name': 'Indian Restaurant',
+         'pluralName': 'Indian Restaurants',
+         'shortName': 'Indian',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/indian_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-5247116c11d2982261defb5d-5'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4ca7439514c33704cf9cc73b',
+       'name': "Domino's Pizza",
+       'location': {'address': 'S.V Road',
+        'lat': 19.131,
+        'lng': 72.848,
+        'labeledLatLngs': [{'label': 'display', 'lat': 19.131, 'lng': 72.848}],
+        'distance': 250,
+        'postalCode': '400010',
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['S.V Road',
+         'Mumbai 400010',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d1ca941735',
+         'name': 'Pizza Place',
+         'pluralName': 'Pizza Places',
+         'shortName': 'Pizza',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/pizza_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4ca7439514c33704cf9cc73b-6'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4b46128bf964a520751526e3',
+       'name': 'Garden Court',
+       'location': {'address': 'Opp. Andheri Sports Complex, Andheri',
+        'crossStreet': 'JP Rd.',
+        'lat': 19.127188369589465,
+        'lng': 72.83747791351865,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.127188369589465,
+          'lng': 72.83747791351865}],
+        'distance': 971,
+        'postalCode': '400058',
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Opp. Andheri Sports Complex, Andheri (JP Rd.)',
+         'Mumbai 400058',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d10f941735',
+         'name': 'Indian Restaurant',
+         'pluralName': 'Indian Restaurants',
+         'shortName': 'Indian',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/indian_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4b46128bf964a520751526e3-7'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4fc97d4de4b0b44b52d33799',
+       'name': 'Subway',
+       'location': {'address': 'Shop No. 5, Mayfair Meridian, Amboli,',
+        'crossStreet': 'Ceasar Road',
+        'lat': 19.1278600430168,
+        'lng': 72.84446095143547,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.1278600430168,
+          'lng': 72.84446095143547}],
+        'distance': 262,
+        'postalCode': '400058',
+        'cc': 'IN',
+        'city': 'Andheri West',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Shop No. 5, Mayfair Meridian, Amboli, (Ceasar Road)',
+         'Andheri West 400058',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d1c5941735',
+         'name': 'Sandwich Place',
+         'pluralName': 'Sandwich Places',
+         'shortName': 'Sandwiches',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/deli_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4fc97d4de4b0b44b52d33799-8'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4dd391b0d1643acaa1e3b8a7',
+       'name': 'Sarvodaya Veg. Restaurant',
+       'location': {'address': 'Old nagardas road',
+        'crossStreet': 'Nr. Andheri subway',
+        'lat': 19.12375959553322,
+        'lng': 72.85089307715918,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.12375959553322,
+          'lng': 72.85089307715918}],
+        'distance': 774,
+        'cc': 'IN',
+        'city': 'Mumbau',
+        'country': 'India',
+        'formattedAddress': ['Old nagardas road (Nr. Andheri subway)',
+         'Mumbau',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d10f941735',
+         'name': 'Indian Restaurant',
+         'pluralName': 'Indian Restaurants',
+         'shortName': 'Indian',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/indian_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4dd391b0d1643acaa1e3b8a7-9'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4b0587dbf964a5206ea422e3',
+       'name': 'Courtyard Restaurant & Bar',
+       'location': {'address': 'Veera Desai Road',
+        'lat': 19.13169172480515,
+        'lng': 72.8372690106853,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.13169172480515,
+          'lng': 72.8372690106853}],
+        'distance': 1000,
+        'postalCode': '400 058',
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Veera Desai Road',
+         'Mumbai 400 058',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d142941735',
+         'name': 'Asian Restaurant',
+         'pluralName': 'Asian Restaurants',
+         'shortName': 'Asian',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/asian_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4b0587dbf964a5206ea422e3-10'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4cc05edbca4aa1cd578c1fb4',
+       'name': 'Kamal Chhaya Bar',
+       'location': {'address': 'Veera desai road',
+        'lat': 19.12824493124868,
+        'lng': 72.83760976887247,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.12824493124868,
+          'lng': 72.83760976887247}],
+        'distance': 936,
+        'cc': 'IN',
+        'city': 'Next to andheri sports complex',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Veera desai road',
+         'Next to andheri sports complex',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d116941735',
+         'name': 'Bar',
+         'pluralName': 'Bars',
+         'shortName': 'Bar',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/nightlife/pub_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4cc05edbca4aa1cd578c1fb4-11'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4cfa068ac6cca35d13dd8332',
+       'name': 'Cafe Coffee Day',
+       'location': {'address': 'Veera Desai Road',
+        'crossStreet': 'Andheri West',
+        'lat': 19.130092296091032,
+        'lng': 72.83765944724641,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.130092296091032,
+          'lng': 72.83765944724641}],
+        'distance': 927,
+        'postalCode': '400053',
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Veera Desai Road (Andheri West)',
+         'Mumbai 400053',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d1e0931735',
+         'name': 'Coffee Shop',
+         'pluralName': 'Coffee Shops',
+         'shortName': 'Coffee Shop',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/coffeeshop_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4cfa068ac6cca35d13dd8332-12'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4e3283001f6e2137f93238a8',
+       'name': 'Shree Ganeshji Iyengers',
+       'location': {'address': 'Near Andheri sports club',
+        'lat': 19.130070369882922,
+        'lng': 72.83767715756139,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.130070369882922,
+          'lng': 72.83767715756139}],
+        'distance': 925,
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Near Andheri sports club',
+         'Mumbai',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d1c7941735',
+         'name': 'Snack Place',
+         'pluralName': 'Snack Places',
+         'shortName': 'Snacks',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/snacks_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4e3283001f6e2137f93238a8-13'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '51224e56e4b0bc189f8e8852',
+       'name': 'Drunken Munkey',
+       'location': {'address': 'Bharat Ark',
+        'crossStreet': 'Veera Desai Road, Andheri West',
+        'lat': 19.13067225353994,
+        'lng': 72.83751881642586,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.13067225353994,
+          'lng': 72.83751881642586}],
+        'distance': 950,
+        'postalCode': '400053',
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Bharat Ark (Veera Desai Road, Andheri West)',
+         'Mumbai 400053',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d116941735',
+         'name': 'Bar',
+         'pluralName': 'Bars',
+         'shortName': 'Bar',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/nightlife/pub_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []},
+       'venuePage': {'id': '50517075'}},
+      'referralId': 'e-0-51224e56e4b0bc189f8e8852-14'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4b9fb2aff964a520013637e3',
+       'name': 'Cafe Coffee Day',
+       'location': {'address': 'Ceaser Road',
+        'crossStreet': 'Amboli Naka',
+        'lat': 19.127748138225197,
+        'lng': 72.84466295105099,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.127748138225197,
+          'lng': 72.84466295105099}],
+        'distance': 254,
+        'postalCode': '400058',
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Ceaser Road (Amboli Naka)',
+         'Mumbai 400058',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d1e0931735',
+         'name': 'Coffee Shop',
+         'pluralName': 'Coffee Shops',
+         'shortName': 'Coffee Shop',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/coffeeshop_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4b9fb2aff964a520013637e3-15'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '50f10c93e4b04196705fdea8',
+       'name': 'Burgs',
+       'location': {'address': 'Veera Desai Road',
+        'lat': 19.13029755015865,
+        'lng': 72.83756814465771,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.13029755015865,
+          'lng': 72.83756814465771}],
+        'distance': 939,
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Veera Desai Road',
+         'Mumbai',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d16c941735',
+         'name': 'Burger Joint',
+         'pluralName': 'Burger Joints',
+         'shortName': 'Burgers',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/burger_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-50f10c93e4b04196705fdea8-16'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '57362a4438fa61928008712c',
+       'name': 'Take Care Medico',
+       'location': {'lat': 19.127821,
+        'lng': 72.84429,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.127821,
+          'lng': 72.84429}],
+        'distance': 279,
+        'cc': 'IN',
+        'country': 'India',
+        'formattedAddress': ['India']},
+       'categories': [{'id': '4bf58dd8d48988d10f951735',
+         'name': 'Pharmacy',
+         'pluralName': 'Pharmacies',
+         'shortName': 'Pharmacy',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/shops/pharmacy_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-57362a4438fa61928008712c-17'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4ffadec5e4b02b9716b7bc6d',
+       'name': 'CCD',
+       'location': {'address': 'Shoppers stop',
+        'crossStreet': 'SV road andheri west',
+        'lat': 19.12902056782562,
+        'lng': 72.84950262372956,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.12902056782562,
+          'lng': 72.84950262372956}],
+        'distance': 323,
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Shoppers stop (SV road andheri west)',
+         'Mumbai',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d1e0931735',
+         'name': 'Coffee Shop',
+         'pluralName': 'Coffee Shops',
+         'shortName': 'Coffee Shop',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/coffeeshop_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4ffadec5e4b02b9716b7bc6d-18'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4c07920f0e0a2d7f2079ed0c',
+       'name': "Domino's Pizza",
+       'location': {'address': 'Shop Number 9,10, Ground Floor, AWing, Bharat Ark,Azad Nagar,Veera Desai Road,Andh eri(W),Mumbai400053\nPH-02226749191',
+        'lat': 19.13,
+        'lng': 72.837,
+        'labeledLatLngs': [{'label': 'display', 'lat': 19.13, 'lng': 72.837}],
+        'distance': 995,
+        'postalCode': '400053',
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Shop Number 9,10, Ground Floor, AWing, Bharat Ark,Azad Nagar,Veera Desai Road,Andh eri(W),Mumbai400053',
+         'PH-02226749191',
+         'Mumbai 400053',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d1ca941735',
+         'name': 'Pizza Place',
+         'pluralName': 'Pizza Places',
+         'shortName': 'Pizza',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/pizza_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4c07920f0e0a2d7f2079ed0c-19'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4dd92f7ab0fb8af380b09e73',
+       'name': 'Bostan Restaurant',
+       'location': {'address': 'S. V. Road',
+        'crossStreet': 'Jogeshwari (West)',
+        'lat': 19.135898272834073,
+        'lng': 72.84758136170433,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.135898272834073,
+          'lng': 72.84758136170433}],
+        'distance': 744,
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['S. V. Road (Jogeshwari (West))',
+         'Mumbai',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d142941735',
+         'name': 'Asian Restaurant',
+         'pluralName': 'Asian Restaurants',
+         'shortName': 'Asian',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/asian_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4dd92f7ab0fb8af380b09e73-20'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4e6ca885d1649db799b3d2d6',
+       'name': 'Bowl-O-Drome',
+       'location': {'address': 'The Club',
+        'crossStreet': 'D N Nagar, Andheri West',
+        'lat': 19.124338574447123,
+        'lng': 72.84725249551073,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.124338574447123,
+          'lng': 72.84725249551073}],
+        'distance': 558,
+        'postalCode': '400053',
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['The Club (D N Nagar, Andheri West)',
+         'Mumbai 400053',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d1e4931735',
+         'name': 'Bowling Alley',
+         'pluralName': 'Bowling Alleys',
+         'shortName': 'Bowling Alley',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/arts_entertainment/bowling_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4e6ca885d1649db799b3d2d6-21'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4fec524fe4b0961013aca7ef',
+       'name': 'New Kohinoor Bakery',
+       'location': {'address': 'Jogeshwari',
+        'lat': 19.129815725282747,
+        'lng': 72.85474707242797,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.129815725282747,
+          'lng': 72.85474707242797}],
+        'distance': 875,
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Jogeshwari', 'Mumbai', 'Mahārāshtra', 'India']},
+       'categories': [{'id': '4bf58dd8d48988d16a941735',
+         'name': 'Bakery',
+         'pluralName': 'Bakeries',
+         'shortName': 'Bakery',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/bakery_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4fec524fe4b0961013aca7ef-22'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '5171fb17498ee3a439f76198',
+       'name': 'Ismail college. Jogging area',
+       'location': {'lat': 19.131361465689803,
+        'lng': 72.85485092175313,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.131361465689803,
+          'lng': 72.85485092175313}],
+        'distance': 913,
+        'cc': 'IN',
+        'country': 'India',
+        'formattedAddress': ['India']},
+       'categories': [{'id': '4f4528bc4b90abdf24c9de85',
+         'name': 'Athletics & Sports',
+         'pluralName': 'Athletics & Sports',
+         'shortName': 'Athletics & Sports',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/shops/sports_outdoors_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-5171fb17498ee3a439f76198-23'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4f236cc8e4b0eec7fd26e5db',
+       'name': 'Gundavli Bus Stop',
+       'location': {'lat': 19.127892547213637,
+        'lng': 72.85523747162826,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.127892547213637,
+          'lng': 72.85523747162826}],
+        'distance': 938,
+        'cc': 'IN',
+        'country': 'India',
+        'formattedAddress': ['India']},
+       'categories': [{'id': '4bf58dd8d48988d1fe931735',
+         'name': 'Bus Station',
+         'pluralName': 'Bus Stations',
+         'shortName': 'Bus Station',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/travel/busstation_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4f236cc8e4b0eec7fd26e5db-24'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '51f6560f498efecf293e9def',
+       'name': 'Azad Nagar Metro Station',
+       'location': {'address': 'JP Rd., Munshi Nagar',
+        'crossStreet': 'Andheri',
+        'lat': 19.126977011913397,
+        'lng': 72.83777590069573,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.126977011913397,
+          'lng': 72.83777590069573}],
+        'distance': 947,
+        'cc': 'IN',
+        'neighborhood': 'Jogeshwari West',
+        'country': 'India',
+        'formattedAddress': ['JP Rd., Munshi Nagar (Andheri)', 'India']},
+       'categories': [{'id': '4bf58dd8d48988d1fd931735',
+         'name': 'Metro Station',
+         'pluralName': 'Metro Stations',
+         'shortName': 'Metro',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/travel/subway_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-51f6560f498efecf293e9def-25'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '5045793fe4b0d8c7e0651233',
+       'name': 'Thakur Tea House',
+       'location': {'lat': 19.126301927550532,
+        'lng': 72.85490284639901,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.126301927550532,
+          'lng': 72.85490284639901}],
+        'distance': 950,
+        'cc': 'IN',
+        'country': 'India',
+        'formattedAddress': ['India']},
+       'categories': [{'id': '4bf58dd8d48988d1dc931735',
+         'name': 'Tea Room',
+         'pluralName': 'Tea Rooms',
+         'shortName': 'Tea Room',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/tearoom_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-5045793fe4b0d8c7e0651233-26'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4cede1c27db3224b2a03252e',
+       'name': 'Ribbons & Balloons',
+       'location': {'lat': 19.121490292935484,
+        'lng': 72.8501982635336,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.121490292935484,
+          'lng': 72.8501982635336}],
+        'distance': 955,
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Mumbai', 'Mahārāshtra', 'India']},
+       'categories': [{'id': '4bf58dd8d48988d16a941735',
+         'name': 'Bakery',
+         'pluralName': 'Bakeries',
+         'shortName': 'Bakery',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/bakery_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4cede1c27db3224b2a03252e-27'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '5380af1c498ede9f52bd0e6e',
+       'name': 'Triumph motorcycles',
+       'location': {'lat': 19.131689289544248,
+        'lng': 72.85518554705398,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.131689289544248,
+          'lng': 72.85518554705398}],
+        'distance': 957,
+        'cc': 'IN',
+        'country': 'India',
+        'formattedAddress': ['India']},
+       'categories': [{'id': '4e4c9077bd41f78e849722f9',
+         'name': 'Bike Rental / Bike Share',
+         'pluralName': 'Bike Rentals / Bike Shares',
+         'shortName': 'Bike',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/shops/bikeshop_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-5380af1c498ede9f52bd0e6e-28'},
+     {'reasons': {'count': 0,
+       'items': [{'summary': 'This spot is popular',
+         'type': 'general',
+         'reasonName': 'globalInteractionReason'}]},
+      'venue': {'id': '4f5235b4e4b002a741fc8d8c',
+       'name': 'Fat Cat Kitchen & Bar',
+       'location': {'address': 'Bharat Ark',
+        'crossStreet': 'Veera Desai Road, Andheri (W)',
+        'lat': 19.130591534745285,
+        'lng': 72.83735168400824,
+        'labeledLatLngs': [{'label': 'display',
+          'lat': 19.130591534745285,
+          'lng': 72.83735168400824}],
+        'distance': 966,
+        'cc': 'IN',
+        'city': 'Mumbai',
+        'state': 'Mahārāshtra',
+        'country': 'India',
+        'formattedAddress': ['Bharat Ark (Veera Desai Road, Andheri (W))',
+         'Mumbai',
+         'Mahārāshtra',
+         'India']},
+       'categories': [{'id': '4bf58dd8d48988d110941735',
+         'name': 'Italian Restaurant',
+         'pluralName': 'Italian Restaurants',
+         'shortName': 'Italian',
+         'icon': {'prefix': 'https://ss3.4sqi.net/img/categories_v2/food/italian_',
+          'suffix': '.png'},
+         'primary': True}],
+       'photos': {'count': 0, 'groups': []}},
+      'referralId': 'e-0-4f5235b4e4b002a741fc8d8c-29'}]}]}}
+We will now create a function get_category_type to extract the categories of venues.
+
+def get_category_type(row):
+    try:
+        categories_list = row['categories']
+    except:
+        categories_list = row['venue.categories']
+        
+    if len(categories_list) == 0:
+        return None
+    else:
+        return categories_list[0]['name']
+Now we can clean the JSON obtained using the GET method and store our results in a dataframe.
+
+venues = results['response']['groups'][0]['items']
+    
+nearby_venues = json_normalize(venues)
+
+filtered_columns = ['venue.name', 'venue.categories', 'venue.location.lat', 'venue.location.lng']
+nearby_venues = nearby_venues.loc[:, filtered_columns]
+
+nearby_venues['venue.categories'] = nearby_venues.apply(get_category_type, axis=1)
+
+nearby_venues.columns = [col.split(".")[-1] for col in nearby_venues.columns]
+
+nearby_venues.head()
+name	categories	lat	lng
+0	Cafe Arfa	Indian Restaurant	19.128930	72.847140
+1	5 Spice , Bandra	Chinese Restaurant	19.130421	72.847206
+2	Shawarma Factory	Falafel Restaurant	19.124591	72.840398
+3	Jaffer Bhai's Delhi Darbar	Mughlai Restaurant	19.137714	72.845909
+4	Narayan Sandwich	Sandwich Place	19.121398	72.850270
+We can check how many venues were returned by Foursquare.
+
+print("{} venues were returned for {} by Foursquare".format(len(nearby_venues), neighborhood_name))
+30 venues were returned for Amboli by Foursquare
+Generalizing Foursquare API
+Now that we have seen how the API call works and how we can clean our data to get relevant information, we can generalize this procedure to get nearby venues for all neighborhoods by creating the function getNearbyVenues.
+
+def getNearbyVenues(names, latitudes, longitudes, radius=500):
+    
+    venues_list=[]
+    for name, lat, lng in zip(names, latitudes, longitudes):
+        print(name)
+            
+        url = 'https://api.foursquare.com/v2/venues/explore?&client_id={}&client_secret={}&v={}&ll={},{}&radius={}&limit={}'.format(
+            CLIENT_ID, 
+            CLIENT_SECRET, 
+            VERSION, 
+            lat, 
+            lng, 
+            radius, 
+            LIMIT)
+            
+        results = requests.get(url).json()["response"]['groups'][0]['items']
+        
+        venues_list.append([(
+            name, 
+            lat, 
+            lng, 
+            v['venue']['name'], 
+            v['venue']['location']['lat'], 
+            v['venue']['location']['lng'],  
+            v['venue']['categories'][0]['name']) for v in results])
+
+    nearby_venues = pd.DataFrame([item for venue_list in venues_list for item in venue_list])
+    nearby_venues.columns = ['Neighborhood', 
+                  'Neighborhood Latitude', 
+                  'Neighborhood Longitude', 
+                  'Venue', 
+                  'Venue Latitude', 
+                  'Venue Longitude', 
+                  'Venue Category']
+    
+    return(nearby_venues)
+We can apply the function created to get nearby venues for all neighborhoods in Mumbai. We will get 200 nearby venues within a 1km radius, same as before.
+
+mum_venues = getNearbyVenues(names=df['Neighborhood'], latitudes=df['Latitude'], longitudes=df['Longitude'], radius=radius)
+Amboli
+Chakala, Andheri
+D.N. Nagar
+Four Bungalows
+Lokhandwala
+Marol
+Sahar
+Seven Bungalows
+Versova
+Mira Road
+Bhayandar
+Uttan
+Bandstand Promenade
+Kherwadi
+Pali Hill
+I.C. Colony
+Gorai
+Dahisa
+Aarey Milk Colony
+Bangur Nagar
+Jogeshwari West
+Juhu
+Charkop
+Poisar
+Mahavir Nagar
+Thakur village
+Pali Naka
+Khar Danda
+Dindoshi
+Sunder Nagar
+Kalina
+Naigaon
+Nalasopara
+Virar
+Irla
+Vile Parle
+Bhandup
+Amrut Nagar
+Asalfa
+Pant Nagar
+Kanjurmarg
+Nehru Nagar
+Nahur
+Chandivali
+Hiranandani Gardens
+Indian Institute of Technology Bombay campus
+Vidyavihar
+Vikhroli
+Chembur
+Deonar
+Mankhurd
+Mahul
+Agripada
+Altamount Road
+Bhuleshwar
+Breach Candy
+Carmichael Road
+Cavel
+Churchgate
+Cotton Green
+Cuffe Parade
+Cumbala Hill
+Currey Road
+Dhobitalao
+Dongri
+Kala Ghoda
+Kemps Corner
+Lower Parel
+Mahalaxmi
+Mahim
+Malabar Hill
+Marine Drive
+Marine Lines
+Mumbai Central
+Nariman Point
+Prabhadevi
+Sion
+Walkeshwar
+Worli
+C.G.S. colony
+Dagdi Chawl
+Navy Nagar
+Hindu colony
+Ballard Estate
+Chira Bazaar
+Fanas Wadi
+Chor Bazaar
+Matunga
+Parel
+Gowalia Tank
+Dava Bazaar
+Dharavi
+Thane
+Lets see what our dataframe looks like.
+
+print(mum_venues.shape)
+mum_venues.head(10)
+(3766, 7)
+Neighborhood	Neighborhood Latitude	Neighborhood Longitude	Venue	Venue Latitude	Venue Longitude	Venue Category
+0	Amboli	19.1293	72.84644	Cafe Arfa	19.128930	72.847140	Indian Restaurant
+1	Amboli	19.1293	72.84644	5 Spice , Bandra	19.130421	72.847206	Chinese Restaurant
+2	Amboli	19.1293	72.84644	Shawarma Factory	19.124591	72.840398	Falafel Restaurant
+3	Amboli	19.1293	72.84644	Jaffer Bhai's Delhi Darbar	19.137714	72.845909	Mughlai Restaurant
+4	Amboli	19.1293	72.84644	Narayan Sandwich	19.121398	72.850270	Sandwich Place
+5	Amboli	19.1293	72.84644	Persia Darbar	19.136952	72.846822	Indian Restaurant
+6	Amboli	19.1293	72.84644	Domino's Pizza	19.131000	72.848000	Pizza Place
+7	Amboli	19.1293	72.84644	Garden Court	19.127188	72.837478	Indian Restaurant
+8	Amboli	19.1293	72.84644	Subway	19.127860	72.844461	Sandwich Place
+9	Amboli	19.1293	72.84644	Sarvodaya Veg. Restaurant	19.123760	72.850893	Indian Restaurant
+Lets see how many venues were returned for each neighborhood.
+
+mum_venues.groupby('Neighborhood', as_index=False).count()
+Neighborhood	Neighborhood Latitude	Neighborhood Longitude	Venue	Venue Latitude	Venue Longitude	Venue Category
+0	Aarey Milk Colony	47	47	47	47	47	47
+1	Agripada	29	29	29	29	29	29
+2	Altamount Road	71	71	71	71	71	71
+3	Amboli	30	30	30	30	30	30
+4	Amrut Nagar	15	15	15	15	15	15
+5	Asalfa	10	10	10	10	10	10
+6	Ballard Estate	63	63	63	63	63	63
+7	Bandstand Promenade	35	35	35	35	35	35
+8	Bangur Nagar	40	40	40	40	40	40
+9	Bhandup	5	5	5	5	5	5
+10	Bhayandar	9	9	9	9	9	9
+11	Bhuleshwar	51	51	51	51	51	51
+12	Breach Candy	59	59	59	59	59	59
+13	C.G.S. colony	22	22	22	22	22	22
+14	Carmichael Road	40	40	40	40	40	40
+15	Cavel	57	57	57	57	57	57
+16	Chakala, Andheri	42	42	42	42	42	42
+17	Chandivali	50	50	50	50	50	50
+18	Charkop	8	8	8	8	8	8
+19	Chembur	58	58	58	58	58	58
+20	Chira Bazaar	53	53	53	53	53	53
+21	Chor Bazaar	32	32	32	32	32	32
+22	Churchgate	100	100	100	100	100	100
+23	Cotton Green	8	8	8	8	8	8
+24	Cuffe Parade	22	22	22	22	22	22
+25	Cumbala Hill	49	49	49	49	49	49
+26	Currey Road	47	47	47	47	47	47
+27	D.N. Nagar	46	46	46	46	46	46
+28	Dagdi Chawl	58	58	58	58	58	58
+29	Dahisa	24	24	24	24	24	24
+...	...	...	...	...	...	...	...
+63	Marol	17	17	17	17	17	17
+64	Matunga	65	65	65	65	65	65
+65	Mira Road	15	15	15	15	15	15
+66	Mumbai Central	59	59	59	59	59	59
+67	Nahur	9	9	9	9	9	9
+68	Naigaon	41	41	41	41	41	41
+69	Nalasopara	12	12	12	12	12	12
+70	Nariman Point	50	50	50	50	50	50
+71	Navy Nagar	12	12	12	12	12	12
+72	Nehru Nagar	98	98	98	98	98	98
+73	Pali Hill	100	100	100	100	100	100
+74	Pali Naka	100	100	100	100	100	100
+75	Pant Nagar	25	25	25	25	25	25
+76	Parel	14	14	14	14	14	14
+77	Poisar	14	14	14	14	14	14
+78	Prabhadevi	58	58	58	58	58	58
+79	Sahar	30	30	30	30	30	30
+80	Seven Bungalows	67	67	67	67	67	67
+81	Sion	30	30	30	30	30	30
+82	Sunder Nagar	58	58	58	58	58	58
+83	Thakur village	34	34	34	34	34	34
+84	Thane	3	3	3	3	3	3
+85	Uttan	7	7	7	7	7	7
+86	Versova	40	40	40	40	40	40
+87	Vidyavihar	95	95	95	95	95	95
+88	Vikhroli	9	9	9	9	9	9
+89	Vile Parle	80	80	80	80	80	80
+90	Virar	14	14	14	14	14	14
+91	Walkeshwar	11	11	11	11	11	11
+92	Worli	28	28	28	28	28	28
+93 rows × 7 columns
+
+We can now check how many unique categories are there in our data.
+
+print("There are {} unique categories".format(mum_venues['Venue Category'].nunique()))
+There are 221 unique categories
+Analyzing each neighborhood
+We can start analyzing each neighborhood by One-hot Encoding to see which categories belong in which neighborhoods.
+
+mum_onehot = pd.get_dummies(mum_venues[['Venue Category']], prefix="", prefix_sep="")
+mum_onehot.head()
+ATM	Accessories Store	Airport Terminal	American Restaurant	Antique Shop	Aquarium	Arcade	Art Gallery	Arts & Crafts Store	Arts & Entertainment	...	Trail	Train	Train Station	Vegetarian / Vegan Restaurant	Whisky Bar	Wine Bar	Wine Shop	Women's Store	Yoga Studio	Zoo
+0	0	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+1	0	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+2	0	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+3	0	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+4	0	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+5 rows × 221 columns
+
+Adding Neighborhood column to the one-hot encoded dataframe.
+
+mum_onehot['Neighborhood'] = mum_venues['Neighborhood']
+mum_onehot.head()
+ATM	Accessories Store	Airport Terminal	American Restaurant	Antique Shop	Aquarium	Arcade	Art Gallery	Arts & Crafts Store	Arts & Entertainment	...	Trail	Train	Train Station	Vegetarian / Vegan Restaurant	Whisky Bar	Wine Bar	Wine Shop	Women's Store	Yoga Studio	Zoo
+0	0	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+1	0	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+2	0	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+3	0	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+4	0	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+5 rows × 221 columns
+
+Moving the Neighborhood column to the first column.
+
+temp = list(mum_onehot.columns)
+
+if 'Neighborhood' in temp:
+    temp.remove('Neighborhood')
+    
+fixed_columns = ['Neighborhood'] + temp
+mum_onehot = mum_onehot[fixed_columns]
+
+mum_onehot.head()
+Neighborhood	ATM	Accessories Store	Airport Terminal	American Restaurant	Antique Shop	Aquarium	Arcade	Art Gallery	Arts & Crafts Store	...	Trail	Train	Train Station	Vegetarian / Vegan Restaurant	Whisky Bar	Wine Bar	Wine Shop	Women's Store	Yoga Studio	Zoo
+0	Amboli	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+1	Amboli	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+2	Amboli	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+3	Amboli	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+4	Amboli	0	0	0	0	0	0	0	0	0	...	0	0	0	0	0	0	0	0	0	0
+5 rows × 221 columns
+
+Now we can groupby neighborhood and take the mean for all categories.
+
+mum_grouped = mum_onehot.groupby('Neighborhood', sort=False).mean().reset_index()
+print(mum_grouped.shape)
+mum_grouped.head(10)
+(93, 221)
+Neighborhood	ATM	Accessories Store	Airport Terminal	American Restaurant	Antique Shop	Aquarium	Arcade	Art Gallery	Arts & Crafts Store	...	Trail	Train	Train Station	Vegetarian / Vegan Restaurant	Whisky Bar	Wine Bar	Wine Shop	Women's Store	Yoga Studio	Zoo
+0	Amboli	0.0	0.0	0.000000	0.0	0.0	0.0	0.0	0.0	0.000000	...	0.0	0.0	0.0	0.000000	0.0	0.0	0.000	0.000000	0.0	0.0
+1	Chakala, Andheri	0.0	0.0	0.000000	0.0	0.0	0.0	0.0	0.0	0.000000	...	0.0	0.0	0.0	0.047619	0.0	0.0	0.000	0.000000	0.0	0.0
+2	D.N. Nagar	0.0	0.0	0.000000	0.0	0.0	0.0	0.0	0.0	0.000000	...	0.0	0.0	0.0	0.043478	0.0	0.0	0.000	0.021739	0.0	0.0
+3	Four Bungalows	0.0	0.0	0.000000	0.0	0.0	0.0	0.0	0.0	0.000000	...	0.0	0.0	0.0	0.030303	0.0	0.0	0.000	0.015152	0.0	0.0
+4	Lokhandwala	0.0	0.0	0.000000	0.0	0.0	0.0	0.0	0.0	0.000000	...	0.0	0.0	0.0	0.010753	0.0	0.0	0.000	0.010753	0.0	0.0
+5	Marol	0.0	0.0	0.000000	0.0	0.0	0.0	0.0	0.0	0.000000	...	0.0	0.0	0.0	0.000000	0.0	0.0	0.000	0.000000	0.0	0.0
+6	Sahar	0.0	0.0	0.033333	0.0	0.0	0.0	0.0	0.0	0.000000	...	0.0	0.0	0.0	0.000000	0.0	0.0	0.000	0.000000	0.0	0.0
+7	Seven Bungalows	0.0	0.0	0.000000	0.0	0.0	0.0	0.0	0.0	0.014925	...	0.0	0.0	0.0	0.029851	0.0	0.0	0.000	0.000000	0.0	0.0
+8	Versova	0.0	0.0	0.000000	0.0	0.0	0.0	0.0	0.0	0.025000	...	0.0	0.0	0.0	0.000000	0.0	0.0	0.025	0.000000	0.0	0.0
+9	Mira Road	0.0	0.0	0.000000	0.0	0.0	0.0	0.0	0.0	0.000000	...	0.0	0.0	0.0	0.000000	0.0	0.0	0.000	0.066667	0.0	0.0
+10 rows × 221 columns
+
+In order to further understand the data, we can display the top 5 venues of all neighborhoods.
+
+num_top_venues = 5
+
+for hood in mum_grouped['Neighborhood']:
+    print("----"+hood+"----")
+    temp = mum_grouped[mum_grouped['Neighborhood'] == hood].T.reset_index()
+    temp.columns = ['venue','freq']
+    temp = temp.iloc[1:]
+    temp['freq'] = temp['freq'].astype(float)
+    temp = temp.round({'freq': 2})
+    print(temp.sort_values('freq', ascending=False).reset_index(drop=True).head(num_top_venues))
+    print('\n')
+----Amboli----
+               venue  freq
+0  Indian Restaurant  0.13
+1        Coffee Shop  0.10
+2        Pizza Place  0.07
+3   Asian Restaurant  0.07
+4     Sandwich Place  0.07
+
+
+----Chakala, Andheri----
+               venue  freq
+0              Hotel  0.17
+1  Indian Restaurant  0.14
+2               Café  0.10
+3         Restaurant  0.05
+4          Hotel Bar  0.05
+
+
+----D.N. Nagar----
+                  venue  freq
+0                   Bar  0.11
+1                   Pub  0.09
+2     Indian Restaurant  0.09
+3           Pizza Place  0.07
+4  Gym / Fitness Center  0.07
+
+
+----Four Bungalows----
+                venue  freq
+0                 Pub  0.08
+1                Café  0.06
+2   Indian Restaurant  0.06
+3              Lounge  0.05
+4  Chinese Restaurant  0.05
+
+
+----Lokhandwala----
+                venue  freq
+0   Indian Restaurant  0.13
+1  Chinese Restaurant  0.06
+2                Café  0.05
+3                 Pub  0.04
+4              Bakery  0.04
+
+
+----Marol----
+                  venue  freq
+0     Indian Restaurant  0.35
+1                 Hotel  0.12
+2                Bakery  0.06
+3                Lounge  0.06
+4  Fast Food Restaurant  0.06
+
+
+----Sahar----
+               venue  freq
+0              Hotel  0.17
+1               Café  0.10
+2  Indian Restaurant  0.10
+3             Lounge  0.07
+4   Asian Restaurant  0.07
+
+
+----Seven Bungalows----
+                venue  freq
+0                Café  0.18
+1                 Pub  0.07
+2         Pizza Place  0.04
+3  Seafood Restaurant  0.04
+4         Coffee Shop  0.04
+
+
+----Versova----
+                venue  freq
+0                Café  0.20
+1      Ice Cream Shop  0.10
+2               Beach  0.08
+3  Salon / Barbershop  0.05
+4         Coffee Shop  0.05
+
+
+----Mira Road----
+               venue  freq
+0  Indian Restaurant  0.13
+1    Motorcycle Shop  0.07
+2           Dive Bar  0.07
+3                Bar  0.07
+4         Food Truck  0.07
+
+
+----Bhayandar----
+               venue  freq
+0         Food Truck  0.11
+1               Lake  0.11
+2     Ice Cream Shop  0.11
+3              Diner  0.11
+4  Electronics Store  0.11
+
+
+----Uttan----
+        venue  freq
+0         ATM  0.14
+1      Bakery  0.14
+2  Restaurant  0.14
+3       River  0.14
+4        Café  0.14
+
+
+----Bandstand Promenade----
+            venue  freq
+0            Café  0.11
+1     Coffee Shop  0.11
+2  Scenic Lookout  0.06
+3        Tea Room  0.06
+4      Food Truck  0.06
+
+
+----Kherwadi----
+                venue  freq
+0   Indian Restaurant  0.11
+1                Café  0.11
+2          Hookah Bar  0.07
+3  Italian Restaurant  0.05
+4          Restaurant  0.05
+
+
+----Pali Hill----
+                  venue  freq
+0     Indian Restaurant  0.07
+1                Bakery  0.07
+2                  Café  0.06
+3    Italian Restaurant  0.05
+4  Fast Food Restaurant  0.05
+
+
+----I.C. Colony----
+                  venue  freq
+0     Indian Restaurant  0.17
+1  Fast Food Restaurant  0.10
+2    Chinese Restaurant  0.10
+3          Dessert Shop  0.07
+4           Coffee Shop  0.07
+
+
+----Gorai----
+                venue  freq
+0               Beach  0.29
+1                Food  0.14
+2  Seafood Restaurant  0.14
+3      Scenic Lookout  0.14
+4              Resort  0.14
+
+
+----Dahisa----
+                venue  freq
+0   Indian Restaurant  0.08
+1  Chinese Restaurant  0.08
+2                Café  0.08
+3           Juice Bar  0.08
+4                 Bar  0.08
+
+
+----Aarey Milk Colony----
+                           venue  freq
+0           Fast Food Restaurant  0.15
+1              Indian Restaurant  0.11
+2  Vegetarian / Vegan Restaurant  0.06
+3                          Hotel  0.04
+4                      Multiplex  0.04
+
+
+----Bangur Nagar----
+                  venue  freq
+0           Coffee Shop  0.12
+1     Indian Restaurant  0.10
+2  Fast Food Restaurant  0.08
+3             Multiplex  0.08
+4        Clothing Store  0.08
+
+
+----Jogeshwari West----
+                 venue  freq
+0    Indian Restaurant  0.18
+1       Ice Cream Shop  0.09
+2   Chinese Restaurant  0.09
+3           Smoke Shop  0.09
+4  Fried Chicken Joint  0.09
+
+
+----Juhu----
+               venue  freq
+0  Indian Restaurant  0.16
+1        Coffee Shop  0.09
+2      Movie Theater  0.04
+3      Shopping Mall  0.04
+4               Café  0.04
+
+
+----Charkop----
+                      venue  freq
+0                Playground  0.12
+1      Gym / Fitness Center  0.12
+2           Motorcycle Shop  0.12
+3  Bike Rental / Bike Share  0.12
+4                      Café  0.12
+
+
+----Poisar----
+               venue  freq
+0  Indian Restaurant  0.14
+1      Train Station  0.14
+2        Snack Place  0.07
+3  Electronics Store  0.07
+4     Sandwich Place  0.07
+
+
+----Mahavir Nagar----
+                  venue  freq
+0           Pizza Place  0.10
+1     Indian Restaurant  0.10
+2  Fast Food Restaurant  0.10
+3           Coffee Shop  0.07
+4          Dessert Shop  0.07
+
+
+----Thakur village----
+                  venue  freq
+0                  Café  0.09
+1     Indian Restaurant  0.06
+2           Pizza Place  0.06
+3  Fast Food Restaurant  0.06
+4                   Gym  0.06
+
+
+----Pali Naka----
+                venue  freq
+0                Café  0.10
+1   Indian Restaurant  0.08
+2              Bakery  0.07
+3  Seafood Restaurant  0.05
+4                 Bar  0.04
+
+
+----Khar Danda----
+                venue  freq
+0               Hotel  0.10
+1  Italian Restaurant  0.07
+2   Indian Restaurant  0.07
+3      Clothing Store  0.07
+4         Coffee Shop  0.07
+
+
+----Dindoshi----
+                 venue  freq
+0                 Café  0.22
+1           Playground  0.11
+2               Office  0.11
+3  Monument / Landmark  0.11
+4   Seafood Restaurant  0.11
+
+
+----Sunder Nagar----
+                  venue  freq
+0     Indian Restaurant  0.22
+1           Coffee Shop  0.09
+2  Fast Food Restaurant  0.07
+3                Bakery  0.05
+4         Movie Theater  0.05
+
+
+----Kalina----
+                  venue  freq
+0     Indian Restaurant  0.19
+1           Pizza Place  0.05
+2  Fast Food Restaurant  0.05
+3                Lounge  0.05
+4           Coffee Shop  0.05
+
+
+----Naigaon----
+                  venue  freq
+0     Indian Restaurant  0.15
+1           Coffee Shop  0.12
+2           Flower Shop  0.05
+3                  Café  0.05
+4  Fast Food Restaurant  0.05
+
+
+----Nalasopara----
+              venue  freq
+0         Multiplex  0.25
+1    Ice Cream Shop  0.17
+2       Pizza Place  0.08
+3  Department Store  0.08
+4             Diner  0.08
+
+
+----Virar----
+                  venue  freq
+0  Fast Food Restaurant  0.21
+1          Cupcake Shop  0.07
+2                   Gym  0.07
+3           Pizza Place  0.07
+4         Movie Theater  0.07
+
+
+----Irla----
+               venue  freq
+0  Indian Restaurant  0.20
+1             Bakery  0.10
+2        Coffee Shop  0.10
+3               Café  0.10
+4  Electronics Store  0.07
+
+
+----Vile Parle----
+               venue  freq
+0  Indian Restaurant  0.14
+1               Café  0.10
+2        Coffee Shop  0.08
+3              Hotel  0.06
+4     Sandwich Place  0.05
+
+
+----Bhandup----
+                  venue  freq
+0         Train Station   0.4
+1     Indian Restaurant   0.2
+2      Asian Restaurant   0.2
+3  Fast Food Restaurant   0.2
+4                   ATM   0.0
+
+
+----Amrut Nagar----
+               venue  freq
+0  Indian Restaurant  0.20
+1              Hotel  0.07
+2      Train Station  0.07
+3         Smoke Shop  0.07
+4               Café  0.07
+
+
+----Asalfa----
+                       venue  freq
+0                       Café   0.3
+1  Indian Chinese Restaurant   0.1
+2              Grocery Store   0.1
+3                  Multiplex   0.1
+4                 Steakhouse   0.1
+
+
+----Pant Nagar----
+                  venue  freq
+0     Indian Restaurant  0.28
+1           Coffee Shop  0.08
+2           Pizza Place  0.08
+3        Ice Cream Shop  0.04
+4  Gym / Fitness Center  0.04
+
+
+----Kanjurmarg----
+                venue  freq
+0       Train Station  0.22
+1  Chinese Restaurant  0.11
+2           Gift Shop  0.11
+3                 Gym  0.11
+4           Multiplex  0.11
+
+
+----Nehru Nagar----
+               venue  freq
+0  Indian Restaurant  0.11
+1               Café  0.06
+2         Restaurant  0.04
+3                Pub  0.04
+4             Lounge  0.04
+
+
+----Nahur----
+                  venue  freq
+0            Restaurant  0.22
+1                   Pub  0.11
+2           Coffee Shop  0.11
+3           Bus Station  0.11
+4  Fast Food Restaurant  0.11
+
+
+----Chandivali----
+                  venue  freq
+0     Indian Restaurant  0.16
+1  Fast Food Restaurant  0.12
+2            Restaurant  0.06
+3                 Hotel  0.04
+4                  Café  0.04
+
+
+----Hiranandani Gardens----
+                  venue  freq
+0     Indian Restaurant  0.12
+1  Fast Food Restaurant  0.04
+2                Lounge  0.04
+3           Coffee Shop  0.04
+4                   Bar  0.03
+
+
+----Indian Institute of Technology Bombay campus----
+                venue  freq
+0   Indian Restaurant  0.16
+1                 Bar  0.04
+2         Pizza Place  0.04
+3  Chinese Restaurant  0.04
+4          Restaurant  0.04
+
+
+----Vidyavihar----
+                           venue  freq
+0              Indian Restaurant  0.22
+1                    Coffee Shop  0.06
+2                           Café  0.06
+3                            Bar  0.05
+4  Vegetarian / Vegan Restaurant  0.05
+
+
+----Vikhroli----
+                           venue  freq
+0  Vegetarian / Vegan Restaurant  0.22
+1                           Café  0.22
+2                     Restaurant  0.11
+3             Chinese Restaurant  0.11
+4              Indian Restaurant  0.11
+
+
+----Chembur----
+                  venue  freq
+0     Indian Restaurant  0.21
+1                  Café  0.07
+2           Pizza Place  0.07
+3  Fast Food Restaurant  0.05
+4      Asian Restaurant  0.03
+
+
+----Deonar----
+                venue  freq
+0  Chinese Restaurant  0.15
+1         Music Venue  0.08
+2        Soccer Field  0.08
+3       Movie Theater  0.08
+4              Garden  0.08
+
+
+----Mankhurd----
+           venue  freq
+0     Sports Bar  0.25
+1  Train Station  0.25
+2    Bus Station  0.25
+3    Coffee Shop  0.25
+4            ATM  0.00
+
+
+----Mahul----
+                  venue  freq
+0     Indian Restaurant  0.26
+1  Fast Food Restaurant  0.07
+2            Smoke Shop  0.04
+3           Golf Course  0.04
+4                   Bar  0.04
+
+
+----Agripada----
+                  venue  freq
+0     Indian Restaurant  0.17
+1  Fast Food Restaurant  0.14
+2                Bakery  0.10
+3                   Gym  0.07
+4           Coffee Shop  0.07
+
+
+----Altamount Road----
+               venue  freq
+0               Café  0.08
+1  Indian Restaurant  0.08
+2             Bakery  0.07
+3        Coffee Shop  0.06
+4     Sandwich Place  0.04
+
+
+----Bhuleshwar----
+                  venue  freq
+0     Indian Restaurant  0.31
+1                  Café  0.08
+2        Ice Cream Shop  0.04
+3          Dessert Shop  0.04
+4  Fast Food Restaurant  0.04
+
+
+----Breach Candy----
+          venue  freq
+0           Bar  0.08
+1        Bakery  0.07
+2          Café  0.07
+3  Dessert Shop  0.05
+4   Pizza Place  0.05
+
+
+----Carmichael Road----
+                  venue  freq
+0     Indian Restaurant  0.10
+1  Fast Food Restaurant  0.10
+2                  Café  0.08
+3           Coffee Shop  0.08
+4                   Bar  0.05
+
+
+----Cavel----
+                  venue  freq
+0     Indian Restaurant  0.25
+1                  Café  0.05
+2                Bakery  0.05
+3  Fast Food Restaurant  0.04
+4                Market  0.04
+
+
+----Churchgate----
+                  venue  freq
+0     Indian Restaurant  0.13
+1           Coffee Shop  0.06
+2                  Café  0.06
+3  Fast Food Restaurant  0.05
+4        Cricket Ground  0.04
+
+
+----Cotton Green----
+                    venue  freq
+0                   Plaza  0.25
+1             Pizza Place  0.12
+2           Train Station  0.12
+3  Furniture / Home Store  0.12
+4    Fast Food Restaurant  0.12
+
+
+----Cuffe Parade----
+                venue  freq
+0   Indian Restaurant  0.09
+1  Italian Restaurant  0.09
+2         Coffee Shop  0.09
+3                 Spa  0.09
+4                 Bar  0.05
+
+
+----Cumbala Hill----
+                venue  freq
+0  Chinese Restaurant  0.08
+1                 Bar  0.08
+2                Café  0.06
+3       Shopping Mall  0.04
+4              Bakery  0.04
+
+
+----Currey Road----
+                venue  freq
+0   Indian Restaurant  0.13
+1         Coffee Shop  0.06
+2               Hotel  0.04
+3  Italian Restaurant  0.04
+4              Lounge  0.04
+
+
+----Dhobitalao----
+               venue  freq
+0  Indian Restaurant  0.19
+1      Train Station  0.07
+2               Café  0.07
+3                Bar  0.06
+4             Bakery  0.06
+
+
+----Dongri----
+                venue  freq
+0   Indian Restaurant  0.32
+1        Dessert Shop  0.11
+2           BBQ Joint  0.07
+3  Chinese Restaurant  0.07
+4   Convenience Store  0.04
+
+
+----Kala Ghoda----
+               venue  freq
+0  Indian Restaurant  0.14
+1               Café  0.10
+2        Coffee Shop  0.05
+3                Bar  0.05
+4              Hotel  0.04
+
+
+----Kemps Corner----
+               venue  freq
+0  Indian Restaurant  0.10
+1               Café  0.08
+2             Bakery  0.06
+3        Pizza Place  0.05
+4     Sandwich Place  0.05
+
+
+----Lower Parel----
+               venue  freq
+0  Indian Restaurant  0.10
+1               Café  0.07
+2                Pub  0.05
+3             Lounge  0.04
+4         Restaurant  0.04
+
+
+----Mahalaxmi----
+                  venue  freq
+0     Indian Restaurant  0.23
+1                  Café  0.06
+2                Bakery  0.06
+3  Fast Food Restaurant  0.04
+4        Cricket Ground  0.04
+
+
+----Mahim----
+                  venue  freq
+0  Fast Food Restaurant  0.15
+1     Indian Restaurant  0.15
+2                Bakery  0.12
+3                  Café  0.08
+4                   Gym  0.04
+
+
+----Malabar Hill----
+               venue  freq
+0       Dessert Shop  0.14
+1        Coffee Shop  0.14
+2  Indian Restaurant  0.14
+3     Ice Cream Shop  0.14
+4         Lighthouse  0.14
+
+
+----Marine Drive----
+                  venue  freq
+0     Indian Restaurant  0.18
+1  Fast Food Restaurant  0.06
+2        Cricket Ground  0.04
+3                  Café  0.04
+4                Bakery  0.04
+
+
+----Marine Lines----
+               venue  freq
+0  Indian Restaurant  0.14
+1               Café  0.07
+2          Gastropub  0.05
+3     Cricket Ground  0.05
+4      Train Station  0.05
+
+
+----Mumbai Central----
+                  venue  freq
+0     Indian Restaurant  0.08
+1    Chinese Restaurant  0.08
+2  Fast Food Restaurant  0.07
+3        Ice Cream Shop  0.07
+4           Pizza Place  0.05
+
+
+----Nariman Point----
+                  venue  freq
+0    Italian Restaurant  0.10
+1               Theater  0.08
+2            Restaurant  0.08
+3                 Hotel  0.06
+4  Fast Food Restaurant  0.06
+
+
+----Prabhadevi----
+               venue  freq
+0  Indian Restaurant  0.10
+1               Café  0.10
+2             Bakery  0.09
+3         Restaurant  0.05
+4        Coffee Shop  0.05
+
+
+----Sion----
+                           venue  freq
+0              Indian Restaurant  0.20
+1  Vegetarian / Vegan Restaurant  0.10
+2                   Dance Studio  0.07
+3                  Train Station  0.07
+4             Seafood Restaurant  0.07
+
+
+----Walkeshwar----
+               venue  freq
+0               Park  0.18
+1     Ice Cream Shop  0.09
+2         Lighthouse  0.09
+3  Convenience Store  0.09
+4       Dessert Shop  0.09
+
+
+----Worli----
+               venue  freq
+0     Scenic Lookout  0.14
+1  Indian Restaurant  0.07
+2     Sandwich Place  0.07
+3     Ice Cream Shop  0.07
+4              Hotel  0.04
+
+
+----C.G.S. colony----
+                 venue  freq
+0    Indian Restaurant  0.18
+1            Multiplex  0.18
+2        Train Station  0.09
+3             Tea Room  0.05
+4  Fried Chicken Joint  0.05
+
+
+----Dagdi Chawl----
+               venue  freq
+0  Indian Restaurant  0.21
+1     Sandwich Place  0.07
+2               Café  0.05
+3              Hotel  0.05
+4           Tea Room  0.05
+
+
+----Navy Nagar----
+              venue  freq
+0    Ice Cream Shop  0.17
+1              Park  0.17
+2  Asian Restaurant  0.08
+3       Pizza Place  0.08
+4  Basketball Court  0.08
+
+
+----Hindu colony----
+                           venue  freq
+0              Indian Restaurant  0.19
+1                           Café  0.08
+2           Fast Food Restaurant  0.07
+3                    Coffee Shop  0.05
+4  Vegetarian / Vegan Restaurant  0.05
+
+
+----Ballard Estate----
+                venue  freq
+0   Indian Restaurant  0.19
+1                Café  0.06
+2         Coffee Shop  0.05
+3  Seafood Restaurant  0.05
+4               Hotel  0.03
+
+
+----Chira Bazaar----
+                  venue  freq
+0     Indian Restaurant  0.23
+1                Bakery  0.06
+2                  Café  0.06
+3            Restaurant  0.04
+4  Fast Food Restaurant  0.04
+
+
+----Fanas Wadi----
+                  venue  freq
+0     Indian Restaurant  0.28
+1                  Café  0.05
+2  Fast Food Restaurant  0.05
+3             Juice Bar  0.03
+4        Ice Cream Shop  0.03
+
+
+----Chor Bazaar----
+               venue  freq
+0  Indian Restaurant  0.34
+1       Dessert Shop  0.09
+2          BBQ Joint  0.06
+3              Hotel  0.03
+4        Bus Station  0.03
+
+
+----Matunga----
+                  venue  freq
+0     Indian Restaurant  0.20
+1  Fast Food Restaurant  0.08
+2           Snack Place  0.06
+3                  Café  0.06
+4        Ice Cream Shop  0.05
+
+
+----Parel----
+               venue  freq
+0  Indian Restaurant  0.21
+1        Coffee Shop  0.14
+2              Hotel  0.07
+3                Bar  0.07
+4              Plaza  0.07
+
+
+----Gowalia Tank----
+               venue  freq
+0  Indian Restaurant  0.12
+1               Café  0.08
+2             Bakery  0.06
+3        Coffee Shop  0.05
+4        Pizza Place  0.05
+
+
+----Dava Bazaar----
+                  venue  freq
+0     Indian Restaurant  0.17
+1         Train Station  0.17
+2      Asian Restaurant  0.08
+3           Fish Market  0.08
+4  Fast Food Restaurant  0.08
+
+
+----Dharavi----
+               venue  freq
+0  Indian Restaurant  0.13
+1         Shoe Store  0.07
+2           Boutique  0.07
+3             Market  0.07
+4        Music Venue  0.07
+
+
+----Thane----
+                             venue  freq
+0                      Pizza Place  0.33
+1            Performing Arts Venue  0.33
+2             Fast Food Restaurant  0.33
+3          New American Restaurant  0.00
+4  Molecular Gastronomy Restaurant  0.00
+
+
+Lets now create a dataframe with the top 10 common venues for each neighborhood.
+
+def return_most_common_venues(row, num_top_venues):
+    row_categories = row.iloc[1:]
+    row_categories_sorted = row_categories.sort_values(ascending=False)
+    
+    return row_categories_sorted.index.values[0:num_top_venues]
+num_top_venues = 10
+
+indicators = ['st', 'nd', 'rd']
+
+columns = ['Neighborhood']
+for ind in np.arange(num_top_venues):
+    try:
+        columns.append('{}{} Most Common Venue'.format(ind+1, indicators[ind]))
+    except:
+        columns.append('{}th Most Common Venue'.format(ind+1))
+
+neighborhoods_venues_sorted = pd.DataFrame(columns=columns)
+neighborhoods_venues_sorted['Neighborhood'] = mum_grouped['Neighborhood']
+
+for ind in np.arange(mum_grouped.shape[0]):
+    neighborhoods_venues_sorted.iloc[ind, 1:] = return_most_common_venues(mum_grouped.iloc[ind, :], num_top_venues)
+
+neighborhoods_venues_sorted
+Neighborhood	1st Most Common Venue	2nd Most Common Venue	3rd Most Common Venue	4th Most Common Venue	5th Most Common Venue	6th Most Common Venue	7th Most Common Venue	8th Most Common Venue	9th Most Common Venue	10th Most Common Venue
+0	Amboli	Indian Restaurant	Coffee Shop	Bakery	Bar	Asian Restaurant	Pizza Place	Sandwich Place	Bowling Alley	Bus Station	Bike Rental / Bike Share
+1	Chakala, Andheri	Hotel	Indian Restaurant	Café	Fast Food Restaurant	Pizza Place	Asian Restaurant	Hotel Bar	Vegetarian / Vegan Restaurant	Restaurant	Gym
+2	D.N. Nagar	Bar	Indian Restaurant	Pub	Gym / Fitness Center	Pizza Place	Lounge	Coffee Shop	Vegetarian / Vegan Restaurant	Snack Place	Gym
+3	Four Bungalows	Pub	Café	Indian Restaurant	Gym / Fitness Center	Chinese Restaurant	Bar	Seafood Restaurant	Lounge	Vegetarian / Vegan Restaurant	Coffee Shop
+4	Lokhandwala	Indian Restaurant	Chinese Restaurant	Café	Pub	Bakery	Bar	Italian Restaurant	Gym / Fitness Center	Coffee Shop	Asian Restaurant
+5	Marol	Indian Restaurant	Hotel	Diner	Bakery	Dance Studio	Ice Cream Shop	Chinese Restaurant	Fast Food Restaurant	Restaurant	Lounge
+6	Sahar	Hotel	Café	Indian Restaurant	Lounge	Gym	Asian Restaurant	Pizza Place	Seafood Restaurant	Restaurant	Falafel Restaurant
+7	Seven Bungalows	Café	Pub	Seafood Restaurant	Chinese Restaurant	Pizza Place	Coffee Shop	Bar	Ice Cream Shop	Asian Restaurant	Bistro
+8	Versova	Café	Ice Cream Shop	Beach	Pizza Place	Coffee Shop	Chinese Restaurant	Salon / Barbershop	Frozen Yogurt Shop	Bistro	Sandwich Place
+9	Mira Road	Indian Restaurant	Convenience Store	Coffee Shop	Mexican Restaurant	Fast Food Restaurant	Food Truck	Motorcycle Shop	Movie Theater	Basketball Court	Bar
+10	Bhayandar	Bakery	Pizza Place	Lake	Electronics Store	Ice Cream Shop	Diner	Indian Restaurant	Food Truck	Restaurant	Factory
+11	Uttan	ATM	Café	Food Truck	Bakery	River	Restaurant	Metro Station	Design Studio	Fish Market	Fish & Chips Shop
+12	Bandstand Promenade	Coffee Shop	Café	Tea Room	Scenic Lookout	Deli / Bodega	Performing Arts Venue	Food Truck	Indian Restaurant	Fast Food Restaurant	Lounge
+13	Kherwadi	Café	Indian Restaurant	Hookah Bar	Restaurant	Italian Restaurant	Pizza Place	Seafood Restaurant	Bar	Chinese Restaurant	South American Restaurant
+14	Pali Hill	Indian Restaurant	Bakery	Café	Fast Food Restaurant	Dessert Shop	Italian Restaurant	Seafood Restaurant	Cupcake Shop	Ice Cream Shop	Chinese Restaurant
+15	I.C. Colony	Indian Restaurant	Chinese Restaurant	Fast Food Restaurant	Coffee Shop	Bar	Dessert Shop	Pizza Place	Juice Bar	Basketball Court	Soccer Field
+16	Gorai	Beach	Rest Area	Food	Seafood Restaurant	Scenic Lookout	Resort	Donut Shop	Field	Fast Food Restaurant	Farmers Market
+17	Dahisa	Indian Restaurant	Café	Chinese Restaurant	Juice Bar	Bar	Pet Store	Middle Eastern Restaurant	Restaurant	Movie Theater	Basketball Court
+18	Aarey Milk Colony	Fast Food Restaurant	Indian Restaurant	Vegetarian / Vegan Restaurant	Shopping Mall	Breakfast Spot	Snack Place	Bookstore	Coffee Shop	Donut Shop	Bar
+19	Bangur Nagar	Coffee Shop	Indian Restaurant	Clothing Store	Multiplex	Fast Food Restaurant	Pizza Place	Electronics Store	Smoke Shop	Middle Eastern Restaurant	Pub
+20	Jogeshwari West	Indian Restaurant	Men's Store	Asian Restaurant	Fried Chicken Joint	Mughlai Restaurant	Café	Chinese Restaurant	Smoke Shop	Flea Market	Ice Cream Shop
+21	Juhu	Indian Restaurant	Coffee Shop	Flower Shop	Shopping Mall	Fast Food Restaurant	Vegetarian / Vegan Restaurant	Movie Theater	Café	Lounge	Breakfast Spot
+22	Charkop	Miscellaneous Shop	Gym / Fitness Center	Pizza Place	Café	Playground	Indian Restaurant	Bike Rental / Bike Share	Motorcycle Shop	Zoo	Falafel Restaurant
+23	Poisar	Indian Restaurant	Train Station	Dessert Shop	Sandwich Place	Food	Electronics Store	Fast Food Restaurant	Men's Store	Mexican Restaurant	Snack Place
+24	Mahavir Nagar	Pizza Place	Indian Restaurant	Fast Food Restaurant	Gym / Fitness Center	Dessert Shop	Coffee Shop	Food	Juice Bar	Chinese Restaurant	Donut Shop
+25	Thakur village	Café	Pizza Place	Gym	Indian Restaurant	Lounge	Fast Food Restaurant	Ice Cream Shop	Sporting Goods Shop	Stadium	Sports Bar
+26	Pali Naka	Café	Indian Restaurant	Bakery	Seafood Restaurant	Bar	Dessert Shop	Pizza Place	Chinese Restaurant	Lounge	Snack Place
+27	Khar Danda	Hotel	Italian Restaurant	Clothing Store	Indian Restaurant	Coffee Shop	Diner	Restaurant	Boutique	Café	Bistro
+28	Dindoshi	Café	Playground	Cafeteria	Monument / Landmark	Office	Indian Restaurant	Seafood Restaurant	Pizza Place	Donut Shop	Farm
+29	Sunder Nagar	Indian Restaurant	Coffee Shop	Fast Food Restaurant	Bakery	Movie Theater	Café	Breakfast Spot	Pizza Place	Restaurant	Flower Shop
+...	...	...	...	...	...	...	...	...	...	...	...
+63	Dhobitalao	Indian Restaurant	Train Station	Café	Bakery	Bar	Cricket Ground	Multiplex	Chinese Restaurant	Coffee Shop	Athletics & Sports
+64	Dongri	Indian Restaurant	Dessert Shop	Chinese Restaurant	BBQ Joint	Juice Bar	Restaurant	Café	Food Truck	Garden	Music Venue
+65	Kala Ghoda	Indian Restaurant	Café	Coffee Shop	Bar	Hotel	Seafood Restaurant	Dessert Shop	Fast Food Restaurant	Bakery	Japanese Restaurant
+66	Kemps Corner	Indian Restaurant	Café	Bakery	Pizza Place	Coffee Shop	Dessert Shop	Sandwich Place	Salon / Barbershop	Hotel	Park
+67	Lower Parel	Indian Restaurant	Café	Pub	Lounge	Restaurant	Coffee Shop	Italian Restaurant	Bar	Molecular Gastronomy Restaurant	Hotel
+68	Mahalaxmi	Indian Restaurant	Café	Bakery	Fast Food Restaurant	Restaurant	Cricket Ground	Chinese Restaurant	Bar	Soccer Field	Pizza Place
+69	Mahim	Fast Food Restaurant	Indian Restaurant	Bakery	Café	Chinese Restaurant	Hotel Bar	Dessert Shop	Arcade	Beach	Breakfast Spot
+70	Malabar Hill	Coffee Shop	Convenience Store	Park	Ice Cream Shop	Lighthouse	Indian Restaurant	Dessert Shop	Zoo	Factory	Falafel Restaurant
+71	Marine Drive	Indian Restaurant	Fast Food Restaurant	Cricket Ground	Train Station	Bakery	Café	Food Truck	Food	Italian Restaurant	Indie Movie Theater
+72	Marine Lines	Indian Restaurant	Café	Bakery	Gastropub	Cricket Ground	Train Station	Bar	Lounge	Sandwich Place	Italian Restaurant
+73	Mumbai Central	Chinese Restaurant	Indian Restaurant	Fast Food Restaurant	Ice Cream Shop	Restaurant	Pizza Place	Café	Shopping Mall	Hotel	Park
+74	Nariman Point	Italian Restaurant	Restaurant	Theater	Hotel	Coffee Shop	Fast Food Restaurant	Indian Restaurant	Café	Chaat Place	Cricket Ground
+75	Prabhadevi	Café	Indian Restaurant	Bakery	Restaurant	Coffee Shop	Chinese Restaurant	Pizza Place	Juice Bar	Flea Market	Bar
+76	Sion	Indian Restaurant	Vegetarian / Vegan Restaurant	Dance Studio	Train Station	Seafood Restaurant	Gym / Fitness Center	Electronics Store	Juice Bar	Garden	Snack Place
+77	Walkeshwar	Park	Convenience Store	Restaurant	Ice Cream Shop	Lighthouse	Indian Restaurant	Food & Drink Shop	Coffee Shop	Food Truck	Dessert Shop
+78	Worli	Scenic Lookout	Indian Restaurant	Sandwich Place	Ice Cream Shop	Convenience Store	Garden	Bus Station	Bakery	Dessert Shop	Coffee Shop
+79	C.G.S. colony	Multiplex	Indian Restaurant	Train Station	Pizza Place	Café	Fried Chicken Joint	Chinese Restaurant	Tea Room	Big Box Store	Sports Bar
+80	Dagdi Chawl	Indian Restaurant	Sandwich Place	Hotel	Café	Tea Room	Gym	Fast Food Restaurant	Snack Place	Food Truck	Electronics Store
+81	Navy Nagar	Park	Ice Cream Shop	Grocery Store	Chinese Restaurant	Restaurant	Italian Restaurant	Asian Restaurant	Department Store	Pizza Place	Basketball Court
+82	Hindu colony	Indian Restaurant	Café	Fast Food Restaurant	Vegetarian / Vegan Restaurant	Coffee Shop	Chinese Restaurant	Snack Place	Breakfast Spot	Bar	Movie Theater
+83	Ballard Estate	Indian Restaurant	Café	Coffee Shop	Seafood Restaurant	Parsi Restaurant	Plaza	Bar	Chinese Restaurant	Lounge	Fast Food Restaurant
+84	Chira Bazaar	Indian Restaurant	Café	Bakery	Fast Food Restaurant	Restaurant	Cheese Shop	Juice Bar	Market	Italian Restaurant	Pizza Place
+85	Fanas Wadi	Indian Restaurant	Fast Food Restaurant	Café	Train Station	Ice Cream Shop	Coffee Shop	Bakery	Juice Bar	Chinese Restaurant	Restaurant
+86	Chor Bazaar	Indian Restaurant	Dessert Shop	BBQ Joint	Smoke Shop	Café	Donut Shop	Restaurant	Bus Station	Fast Food Restaurant	Music Venue
+87	Matunga	Indian Restaurant	Fast Food Restaurant	Snack Place	Café	Chinese Restaurant	Vegetarian / Vegan Restaurant	Ice Cream Shop	South Indian Restaurant	Bar	Train Station
+88	Parel	Indian Restaurant	Coffee Shop	Lounge	Restaurant	Roof Deck	Plaza	Bar	Chinese Restaurant	Maharashtrian Restaurant	Hotel
+89	Gowalia Tank	Indian Restaurant	Café	Bakery	Coffee Shop	Pizza Place	Fast Food Restaurant	Snack Place	Chinese Restaurant	Ice Cream Shop	Theater
+90	Dava Bazaar	Train Station	Indian Restaurant	Cupcake Shop	Hotel	Fish Market	Café	Fast Food Restaurant	Coffee Shop	Asian Restaurant	Smoke Shop
+91	Dharavi	Indian Restaurant	Snack Place	Shoe Store	Boutique	Market	Sandwich Place	Fast Food Restaurant	Lake	Café	Garden
+92	Thane	Pizza Place	Performing Arts Venue	Fast Food Restaurant	Dive Bar	Fish Market	Fish & Chips Shop	Field	Farmers Market	Farm	Falafel Restaurant
+93 rows × 11 columns
+
+Clustering neighborhoods
+Now we can use KMeans clustering method to cluster the neighborhoods.
+
+First we need to determine how many clusters to use. This will be done using the Silhouette Score.
+
+We will define a function to plot the Silhouette Score that will be calculated using different number of clusters.
+
+def plot(x, y):
+    fig = plt.figure(figsize=(12,6))
+    plt.plot(x, y, 'o-')
+    plt.xlabel('Number of clusters')
+    plt.ylabel('Silhouette Scores')
+    plt.title('Checking Optimum Number of Clusters')
+    ax = plt.gca()
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+maxk = 15
+scores = []
+kval = []
+
+for k in range(2, maxk+1):
+    cl_df = mum_grouped.drop('Neighborhood', axis=1)
+    kmeans = KMeans(n_clusters=k, init="k-means++", random_state=40).fit_predict(cl_df) #Choose any random_state
+    
+    score = silhouette_score(cl_df, kmeans, metric='euclidean', random_state=0)
+    kval.append(k)
+    scores.append(score)
+We can now display the scores for different number of clusters and plot the data as well.
+
+print(scores)
+print(kval)
+plot(kval, scores)
+[0.09249638480354469, 0.05769793262530753, 0.07827283426763512, 0.09917677954202117, 0.08580272612412242, 0.08598687206817208, 0.09211666612115685, 0.05165397104393539, 0.06314203182571597, 0.08526705717813107, 0.05876252041813831, 0.060133085496564084, 0.07398191498162245, 0.09066730835842506]
+[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+We can see that the silhouette scores are not very high even as we increase the number of clusters. This means that the inter-cluster distance between different clusters is not very high over the range of k-values. However, we will try to cluster our data as best as we can. For this, we will use 5 clusters for our clustering model since it provides the highest silhouette score as seen above.
+
+k = 5
+
+mum_clustering = mum_grouped.drop('Neighborhood', axis=1)
+kmeans = KMeans(n_clusters=k, init="k-means++", random_state=40).fit(mum_clustering) #Can choose any random_state
+
+kmeans.labels_
+array([1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1,
+       0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 2, 1, 0, 1, 2, 0, 1, 1,
+       0, 1, 1, 0, 1, 0, 3, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1,
+       0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1,
+       1, 0, 2, 1, 4], dtype=int32)
+Now we can create a new dataframe that includes cluster labels and the top 10 venues.
+
+neighborhoods_venues_sorted.insert(0, 'Cluster Labels', kmeans.labels_)
+mum_merged = df
+mum_merged = mum_merged.join(neighborhoods_venues_sorted.set_index('Neighborhood'), on='Neighborhood')
+Lets view the newly created dataframe.
+
+print(mum_merged.shape)
+mum_merged
+(93, 15)
+Neighborhood	Location	Latitude	Longitude	Cluster Labels	1st Most Common Venue	2nd Most Common Venue	3rd Most Common Venue	4th Most Common Venue	5th Most Common Venue	6th Most Common Venue	7th Most Common Venue	8th Most Common Venue	9th Most Common Venue	10th Most Common Venue
+0	Amboli	Western Suburbs	19.1293	72.8464	1	Indian Restaurant	Coffee Shop	Bakery	Bar	Asian Restaurant	Pizza Place	Sandwich Place	Bowling Alley	Bus Station	Bike Rental / Bike Share
+1	Chakala, Andheri	Western Suburbs	19.1084	72.8623	1	Hotel	Indian Restaurant	Café	Fast Food Restaurant	Pizza Place	Asian Restaurant	Hotel Bar	Vegetarian / Vegan Restaurant	Restaurant	Gym
+2	D.N. Nagar	Western Suburbs	19.1241	72.8325	0	Bar	Indian Restaurant	Pub	Gym / Fitness Center	Pizza Place	Lounge	Coffee Shop	Vegetarian / Vegan Restaurant	Snack Place	Gym
+3	Four Bungalows	Western Suburbs	19.1263	72.8243	0	Pub	Café	Indian Restaurant	Gym / Fitness Center	Chinese Restaurant	Bar	Seafood Restaurant	Lounge	Vegetarian / Vegan Restaurant	Coffee Shop
+4	Lokhandwala	Western Suburbs	19.1432	72.8249	0	Indian Restaurant	Chinese Restaurant	Café	Pub	Bakery	Bar	Italian Restaurant	Gym / Fitness Center	Coffee Shop	Asian Restaurant
+5	Marol	Western Suburbs	19.1192	72.8827	1	Indian Restaurant	Hotel	Diner	Bakery	Dance Studio	Ice Cream Shop	Chinese Restaurant	Fast Food Restaurant	Restaurant	Lounge
+6	Sahar	Western Suburbs	19.1027	72.8626	0	Hotel	Café	Indian Restaurant	Lounge	Gym	Asian Restaurant	Pizza Place	Seafood Restaurant	Restaurant	Falafel Restaurant
+7	Seven Bungalows	Western Suburbs	19.1315	72.817	0	Café	Pub	Seafood Restaurant	Chinese Restaurant	Pizza Place	Coffee Shop	Bar	Ice Cream Shop	Asian Restaurant	Bistro
+8	Versova	Western Suburbs	19.1377	72.8135	0	Café	Ice Cream Shop	Beach	Pizza Place	Coffee Shop	Chinese Restaurant	Salon / Barbershop	Frozen Yogurt Shop	Bistro	Sandwich Place
+9	Mira Road	Western Suburbs	19.2657	72.8711	1	Indian Restaurant	Convenience Store	Coffee Shop	Mexican Restaurant	Fast Food Restaurant	Food Truck	Motorcycle Shop	Movie Theater	Basketball Court	Bar
+10	Bhayandar	Western Suburbs	19.3074	72.8518	0	Bakery	Pizza Place	Lake	Electronics Store	Ice Cream Shop	Diner	Indian Restaurant	Food Truck	Restaurant	Factory
+11	Uttan	Western Suburbs	26.8663	80.9388	0	ATM	Café	Food Truck	Bakery	River	Restaurant	Metro Station	Design Studio	Fish Market	Fish & Chips Shop
+12	Bandstand Promenade	Western Suburbs	19.0458	72.8191	0	Coffee Shop	Café	Tea Room	Scenic Lookout	Deli / Bodega	Performing Arts Venue	Food Truck	Indian Restaurant	Fast Food Restaurant	Lounge
+13	Kherwadi	Western Suburbs	19.0595	72.8455	0	Café	Indian Restaurant	Hookah Bar	Restaurant	Italian Restaurant	Pizza Place	Seafood Restaurant	Bar	Chinese Restaurant	South American Restaurant
+14	Pali Hill	Western Suburbs	19.068	72.826	0	Indian Restaurant	Bakery	Café	Fast Food Restaurant	Dessert Shop	Italian Restaurant	Seafood Restaurant	Cupcake Shop	Ice Cream Shop	Chinese Restaurant
+15	I.C. Colony	Western Suburbs	19.2492	72.8498	1	Indian Restaurant	Chinese Restaurant	Fast Food Restaurant	Coffee Shop	Bar	Dessert Shop	Pizza Place	Juice Bar	Basketball Court	Soccer Field
+16	Gorai	Western Suburbs	19.2409	72.7841	0	Beach	Rest Area	Food	Seafood Restaurant	Scenic Lookout	Resort	Donut Shop	Field	Fast Food Restaurant	Farmers Market
+17	Dahisa	Western Suburbs	19.2501	72.8593	0	Indian Restaurant	Café	Chinese Restaurant	Juice Bar	Bar	Pet Store	Middle Eastern Restaurant	Restaurant	Movie Theater	Basketball Court
+18	Aarey Milk Colony	Western Suburbs	19.1661	72.8594	1	Fast Food Restaurant	Indian Restaurant	Vegetarian / Vegan Restaurant	Shopping Mall	Breakfast Spot	Snack Place	Bookstore	Coffee Shop	Donut Shop	Bar
+19	Bangur Nagar	Western Suburbs	19.1674	72.8323	1	Coffee Shop	Indian Restaurant	Clothing Store	Multiplex	Fast Food Restaurant	Pizza Place	Electronics Store	Smoke Shop	Middle Eastern Restaurant	Pub
+20	Jogeshwari West	Western Suburbs	19.1412	72.8433	1	Indian Restaurant	Men's Store	Asian Restaurant	Fried Chicken Joint	Mughlai Restaurant	Café	Chinese Restaurant	Smoke Shop	Flea Market	Ice Cream Shop
+21	Juhu	Western Suburbs	19.0149	72.8452	1	Indian Restaurant	Coffee Shop	Flower Shop	Shopping Mall	Fast Food Restaurant	Vegetarian / Vegan Restaurant	Movie Theater	Café	Lounge	Breakfast Spot
+22	Charkop	Western Suburbs	19.2087	72.8261	0	Miscellaneous Shop	Gym / Fitness Center	Pizza Place	Café	Playground	Indian Restaurant	Bike Rental / Bike Share	Motorcycle Shop	Zoo	Falafel Restaurant
+23	Poisar	Western Suburbs	19.2116	72.8527	1	Indian Restaurant	Train Station	Dessert Shop	Sandwich Place	Food	Electronics Store	Fast Food Restaurant	Men's Store	Mexican Restaurant	Snack Place
+24	Mahavir Nagar	Western Suburbs	19.2113	72.8414	0	Pizza Place	Indian Restaurant	Fast Food Restaurant	Gym / Fitness Center	Dessert Shop	Coffee Shop	Food	Juice Bar	Chinese Restaurant	Donut Shop
+25	Thakur village	Western Suburbs	19.2102	72.8754	0	Café	Pizza Place	Gym	Indian Restaurant	Lounge	Fast Food Restaurant	Ice Cream Shop	Sporting Goods Shop	Stadium	Sports Bar
+26	Pali Naka	Western Suburbs	19.0617	72.8294	0	Café	Indian Restaurant	Bakery	Seafood Restaurant	Bar	Dessert Shop	Pizza Place	Chinese Restaurant	Lounge	Snack Place
+27	Khar Danda	Western Suburbs	19.0843	72.8269	0	Hotel	Italian Restaurant	Clothing Store	Indian Restaurant	Coffee Shop	Diner	Restaurant	Boutique	Café	Bistro
+28	Dindoshi	Western Suburbs	19.1686	72.8804	0	Café	Playground	Cafeteria	Monument / Landmark	Office	Indian Restaurant	Seafood Restaurant	Pizza Place	Donut Shop	Farm
+29	Sunder Nagar	Western Suburbs	19.015	72.8385	1	Indian Restaurant	Coffee Shop	Fast Food Restaurant	Bakery	Movie Theater	Café	Breakfast Spot	Pizza Place	Restaurant	Flower Shop
+...	...	...	...	...	...	...	...	...	...	...	...	...	...	...	...
+63	Dhobitalao	South Mumbai	18.9433	72.8286	1	Indian Restaurant	Train Station	Café	Bakery	Bar	Cricket Ground	Multiplex	Chinese Restaurant	Coffee Shop	Athletics & Sports
+64	Dongri	South Mumbai	18.9602	72.8377	1	Indian Restaurant	Dessert Shop	Chinese Restaurant	BBQ Joint	Juice Bar	Restaurant	Café	Food Truck	Garden	Music Venue
+65	Kala Ghoda	South Mumbai	18.9272	72.8331	1	Indian Restaurant	Café	Coffee Shop	Bar	Hotel	Seafood Restaurant	Dessert Shop	Fast Food Restaurant	Bakery	Japanese Restaurant
+66	Kemps Corner	South Mumbai	18.9647	72.8054	0	Indian Restaurant	Café	Bakery	Pizza Place	Coffee Shop	Dessert Shop	Sandwich Place	Salon / Barbershop	Hotel	Park
+67	Lower Parel	South Mumbai	18.9981	72.8281	0	Indian Restaurant	Café	Pub	Lounge	Restaurant	Coffee Shop	Italian Restaurant	Bar	Molecular Gastronomy Restaurant	Hotel
+68	Mahalaxmi	South Mumbai	18.9469	72.8289	1	Indian Restaurant	Café	Bakery	Fast Food Restaurant	Restaurant	Cricket Ground	Chinese Restaurant	Bar	Soccer Field	Pizza Place
+69	Mahim	South Mumbai	19.0407	72.8431	1	Fast Food Restaurant	Indian Restaurant	Bakery	Café	Chinese Restaurant	Hotel Bar	Dessert Shop	Arcade	Beach	Breakfast Spot
+70	Malabar Hill	South Mumbai	18.95	72.795	1	Coffee Shop	Convenience Store	Park	Ice Cream Shop	Lighthouse	Indian Restaurant	Dessert Shop	Zoo	Factory	Falafel Restaurant
+71	Marine Drive	South Mumbai	18.9467	72.8246	1	Indian Restaurant	Fast Food Restaurant	Cricket Ground	Train Station	Bakery	Café	Food Truck	Food	Italian Restaurant	Indie Movie Theater
+72	Marine Lines	South Mumbai	18.9434	72.8232	1	Indian Restaurant	Café	Bakery	Gastropub	Cricket Ground	Train Station	Bar	Lounge	Sandwich Place	Italian Restaurant
+73	Mumbai Central	South Mumbai	18.9697	72.8151	0	Chinese Restaurant	Indian Restaurant	Fast Food Restaurant	Ice Cream Shop	Restaurant	Pizza Place	Café	Shopping Mall	Hotel	Park
+74	Nariman Point	South Mumbai	18.926	72.8189	0	Italian Restaurant	Restaurant	Theater	Hotel	Coffee Shop	Fast Food Restaurant	Indian Restaurant	Café	Chaat Place	Cricket Ground
+75	Prabhadevi	South Mumbai	19.0142	72.8278	0	Café	Indian Restaurant	Bakery	Restaurant	Coffee Shop	Chinese Restaurant	Pizza Place	Juice Bar	Flea Market	Bar
+76	Sion	South Mumbai	19.0434	72.8633	1	Indian Restaurant	Vegetarian / Vegan Restaurant	Dance Studio	Train Station	Seafood Restaurant	Gym / Fitness Center	Electronics Store	Juice Bar	Garden	Snack Place
+77	Walkeshwar	South Mumbai	18.9501	72.7998	0	Park	Convenience Store	Restaurant	Ice Cream Shop	Lighthouse	Indian Restaurant	Food & Drink Shop	Coffee Shop	Food Truck	Dessert Shop
+78	Worli	South Mumbai	19.0074	72.8169	0	Scenic Lookout	Indian Restaurant	Sandwich Place	Ice Cream Shop	Convenience Store	Garden	Bus Station	Bakery	Dessert Shop	Coffee Shop
+79	C.G.S. colony	South Mumbai	19.1389	72.9382	1	Multiplex	Indian Restaurant	Train Station	Pizza Place	Café	Fried Chicken Joint	Chinese Restaurant	Tea Room	Big Box Store	Sports Bar
+80	Dagdi Chawl	South Mumbai	19.0978	72.8443	1	Indian Restaurant	Sandwich Place	Hotel	Café	Tea Room	Gym	Fast Food Restaurant	Snack Place	Food Truck	Electronics Store
+81	Navy Nagar	South Mumbai	18.906	72.8155	0	Park	Ice Cream Shop	Grocery Store	Chinese Restaurant	Restaurant	Italian Restaurant	Asian Restaurant	Department Store	Pizza Place	Basketball Court
+82	Hindu colony	South Mumbai	19.0197	72.8474	1	Indian Restaurant	Café	Fast Food Restaurant	Vegetarian / Vegan Restaurant	Coffee Shop	Chinese Restaurant	Snack Place	Breakfast Spot	Bar	Movie Theater
+83	Ballard Estate	South Mumbai	18.9355	72.84	1	Indian Restaurant	Café	Coffee Shop	Seafood Restaurant	Parsi Restaurant	Plaza	Bar	Chinese Restaurant	Lounge	Fast Food Restaurant
+84	Chira Bazaar	South Mumbai	18.9481	72.827	1	Indian Restaurant	Café	Bakery	Fast Food Restaurant	Restaurant	Cheese Shop	Juice Bar	Market	Italian Restaurant	Pizza Place
+85	Fanas Wadi	South Mumbai	18.9518	72.827	1	Indian Restaurant	Fast Food Restaurant	Café	Train Station	Ice Cream Shop	Coffee Shop	Bakery	Juice Bar	Chinese Restaurant	Restaurant
+86	Chor Bazaar	South Mumbai	18.9603	72.8296	1	Indian Restaurant	Dessert Shop	BBQ Joint	Smoke Shop	Café	Donut Shop	Restaurant	Bus Station	Fast Food Restaurant	Music Venue
+87	Matunga	South Mumbai	19.0272	72.8559	1	Indian Restaurant	Fast Food Restaurant	Snack Place	Café	Chinese Restaurant	Vegetarian / Vegan Restaurant	Ice Cream Shop	South Indian Restaurant	Bar	Train Station
+88	Parel	South Mumbai	18.9957	72.84	1	Indian Restaurant	Coffee Shop	Lounge	Restaurant	Roof Deck	Plaza	Bar	Chinese Restaurant	Maharashtrian Restaurant	Hotel
+89	Gowalia Tank	South Mumbai	18.9645	72.8112	0	Indian Restaurant	Café	Bakery	Coffee Shop	Pizza Place	Fast Food Restaurant	Snack Place	Chinese Restaurant	Ice Cream Shop	Theater
+90	Dava Bazaar	South Mumbai	19.1314	72.927	2	Train Station	Indian Restaurant	Cupcake Shop	Hotel	Fish Market	Café	Fast Food Restaurant	Coffee Shop	Asian Restaurant	Smoke Shop
+91	Dharavi	Mumbai	19.0467	72.8546	1	Indian Restaurant	Snack Place	Shoe Store	Boutique	Market	Sandwich Place	Fast Food Restaurant	Lake	Café	Garden
+92	Thane	Mumbai	19.1409	72.8826	4	Pizza Place	Performing Arts Venue	Fast Food Restaurant	Dive Bar	Fish Market	Fish & Chips Shop	Field	Farmers Market	Farm	Falafel Restaurant
+93 rows × 15 columns
+
+We can visualize the clustering by creating a map.
+
+map_clusters = folium.Map(location=[latitude, longitude], zoom_start=10)
+
+x = np.arange(k)
+ys = [i + x + (i*x)**2 for i in range(k)]
+colors_array = cm.rainbow(np.linspace(0, 1, len(ys)))
+rainbow = [colors.rgb2hex(i) for i in colors_array]
+
+markers_colors = []
+for lat, lon, poi, cluster in zip(mum_merged['Latitude'], mum_merged['Longitude'], mum_merged['Neighborhood'], mum_merged['Cluster Labels']):
+    label = folium.Popup(str(poi) + ' Cluster ' + str(cluster), parse_html=True)
+    folium.CircleMarker(
+        [lat, lon],
+        radius=5,
+        popup=label,
+        color=rainbow[cluster-1],
+        fill=True,
+        fill_color=rainbow[cluster-1],
+        fill_opacity=0.7).add_to(map_clusters)
+       
+map_clusters
+Make this Notebook Trusted to load map: File -> Trust Notebook
+We can now view the neighborhoods in each cluster and their top 10 most common venues.
+
+Cluster 1
+mum_merged.loc[mum_merged['Cluster Labels'] == 0, mum_merged.columns[[0] + [1] + list(range(5, mum_merged.shape[1]))]]
+Neighborhood	Location	1st Most Common Venue	2nd Most Common Venue	3rd Most Common Venue	4th Most Common Venue	5th Most Common Venue	6th Most Common Venue	7th Most Common Venue	8th Most Common Venue	9th Most Common Venue	10th Most Common Venue
+2	D.N. Nagar	Western Suburbs	Bar	Indian Restaurant	Pub	Gym / Fitness Center	Pizza Place	Lounge	Coffee Shop	Vegetarian / Vegan Restaurant	Snack Place	Gym
+3	Four Bungalows	Western Suburbs	Pub	Café	Indian Restaurant	Gym / Fitness Center	Chinese Restaurant	Bar	Seafood Restaurant	Lounge	Vegetarian / Vegan Restaurant	Coffee Shop
+4	Lokhandwala	Western Suburbs	Indian Restaurant	Chinese Restaurant	Café	Pub	Bakery	Bar	Italian Restaurant	Gym / Fitness Center	Coffee Shop	Asian Restaurant
+6	Sahar	Western Suburbs	Hotel	Café	Indian Restaurant	Lounge	Gym	Asian Restaurant	Pizza Place	Seafood Restaurant	Restaurant	Falafel Restaurant
+7	Seven Bungalows	Western Suburbs	Café	Pub	Seafood Restaurant	Chinese Restaurant	Pizza Place	Coffee Shop	Bar	Ice Cream Shop	Asian Restaurant	Bistro
+8	Versova	Western Suburbs	Café	Ice Cream Shop	Beach	Pizza Place	Coffee Shop	Chinese Restaurant	Salon / Barbershop	Frozen Yogurt Shop	Bistro	Sandwich Place
+10	Bhayandar	Western Suburbs	Bakery	Pizza Place	Lake	Electronics Store	Ice Cream Shop	Diner	Indian Restaurant	Food Truck	Restaurant	Factory
+11	Uttan	Western Suburbs	ATM	Café	Food Truck	Bakery	River	Restaurant	Metro Station	Design Studio	Fish Market	Fish & Chips Shop
+12	Bandstand Promenade	Western Suburbs	Coffee Shop	Café	Tea Room	Scenic Lookout	Deli / Bodega	Performing Arts Venue	Food Truck	Indian Restaurant	Fast Food Restaurant	Lounge
+13	Kherwadi	Western Suburbs	Café	Indian Restaurant	Hookah Bar	Restaurant	Italian Restaurant	Pizza Place	Seafood Restaurant	Bar	Chinese Restaurant	South American Restaurant
+14	Pali Hill	Western Suburbs	Indian Restaurant	Bakery	Café	Fast Food Restaurant	Dessert Shop	Italian Restaurant	Seafood Restaurant	Cupcake Shop	Ice Cream Shop	Chinese Restaurant
+16	Gorai	Western Suburbs	Beach	Rest Area	Food	Seafood Restaurant	Scenic Lookout	Resort	Donut Shop	Field	Fast Food Restaurant	Farmers Market
+17	Dahisa	Western Suburbs	Indian Restaurant	Café	Chinese Restaurant	Juice Bar	Bar	Pet Store	Middle Eastern Restaurant	Restaurant	Movie Theater	Basketball Court
+22	Charkop	Western Suburbs	Miscellaneous Shop	Gym / Fitness Center	Pizza Place	Café	Playground	Indian Restaurant	Bike Rental / Bike Share	Motorcycle Shop	Zoo	Falafel Restaurant
+24	Mahavir Nagar	Western Suburbs	Pizza Place	Indian Restaurant	Fast Food Restaurant	Gym / Fitness Center	Dessert Shop	Coffee Shop	Food	Juice Bar	Chinese Restaurant	Donut Shop
+25	Thakur village	Western Suburbs	Café	Pizza Place	Gym	Indian Restaurant	Lounge	Fast Food Restaurant	Ice Cream Shop	Sporting Goods Shop	Stadium	Sports Bar
+26	Pali Naka	Western Suburbs	Café	Indian Restaurant	Bakery	Seafood Restaurant	Bar	Dessert Shop	Pizza Place	Chinese Restaurant	Lounge	Snack Place
+27	Khar Danda	Western Suburbs	Hotel	Italian Restaurant	Clothing Store	Indian Restaurant	Coffee Shop	Diner	Restaurant	Boutique	Café	Bistro
+28	Dindoshi	Western Suburbs	Café	Playground	Cafeteria	Monument / Landmark	Office	Indian Restaurant	Seafood Restaurant	Pizza Place	Donut Shop	Farm
+32	Nalasopara	Western Suburbs	Multiplex	Ice Cream Shop	Pizza Place	Platform	Fast Food Restaurant	Indian Restaurant	Diner	Bus Station	Department Store	Factory
+33	Virar	Western Suburbs	Fast Food Restaurant	Multiplex	Garden	Movie Theater	Coffee Shop	Café	Trail	Pizza Place	Gym	Cupcake Shop
+38	Asalfa	Eastern Suburbs	Café	Grocery Store	Steakhouse	Light Rail Station	Factory	Dessert Shop	Multiplex	Indian Chinese Restaurant	Farm	Falafel Restaurant
+41	Nehru Nagar	Eastern Suburbs	Indian Restaurant	Café	Pub	Lounge	Restaurant	Seafood Restaurant	Italian Restaurant	Ice Cream Shop	Asian Restaurant	Molecular Gastronomy Restaurant
+44	Hiranandani Gardens	Eastern Suburbs	Indian Restaurant	Lounge	Fast Food Restaurant	Coffee Shop	Café	Bakery	Chinese Restaurant	Restaurant	Ice Cream Shop	Bar
+47	Vikhroli	Eastern Suburbs	Café	Vegetarian / Vegan Restaurant	Chinese Restaurant	Dessert Shop	Restaurant	Indian Restaurant	Seafood Restaurant	Fast Food Restaurant	Farmers Market	Farm
+49	Deonar	Harbour Suburbs	Chinese Restaurant	Garden	Plaza	Movie Theater	Pub	Music Venue	Café	Indian Restaurant	Lounge	Food
+53	Altamount Road	South Mumbai	Café	Indian Restaurant	Bakery	Coffee Shop	Sandwich Place	Dessert Shop	Pizza Place	Hotel	Chinese Restaurant	Restaurant
+55	Breach Candy	South Mumbai	Bar	Café	Bakery	Sandwich Place	Dessert Shop	Pizza Place	Park	Coffee Shop	Department Store	Japanese Restaurant
+56	Carmichael Road	South Mumbai	Fast Food Restaurant	Indian Restaurant	Café	Coffee Shop	Bar	Gym	Shopping Mall	Snack Place	Department Store	Pub
+59	Cotton Green	South Mumbai	Plaza	Multiplex	Snack Place	Pizza Place	Fast Food Restaurant	Furniture / Home Store	Train Station	Event Space	Donut Shop	Electronics Store
+60	Cuffe Parade	South Mumbai	Spa	Coffee Shop	Italian Restaurant	Indian Restaurant	Cosmetics Shop	Thai Restaurant	Shopping Mall	Snack Place	Food Truck	Chinese Restaurant
+61	Cumbala Hill	South Mumbai	Bar	Chinese Restaurant	Café	Shopping Mall	Indian Restaurant	Fast Food Restaurant	Sandwich Place	Ice Cream Shop	Bakery	Pizza Place
+66	Kemps Corner	South Mumbai	Indian Restaurant	Café	Bakery	Pizza Place	Coffee Shop	Dessert Shop	Sandwich Place	Salon / Barbershop	Hotel	Park
+67	Lower Parel	South Mumbai	Indian Restaurant	Café	Pub	Lounge	Restaurant	Coffee Shop	Italian Restaurant	Bar	Molecular Gastronomy Restaurant	Hotel
+73	Mumbai Central	South Mumbai	Chinese Restaurant	Indian Restaurant	Fast Food Restaurant	Ice Cream Shop	Restaurant	Pizza Place	Café	Shopping Mall	Hotel	Park
+74	Nariman Point	South Mumbai	Italian Restaurant	Restaurant	Theater	Hotel	Coffee Shop	Fast Food Restaurant	Indian Restaurant	Café	Chaat Place	Cricket Ground
+75	Prabhadevi	South Mumbai	Café	Indian Restaurant	Bakery	Restaurant	Coffee Shop	Chinese Restaurant	Pizza Place	Juice Bar	Flea Market	Bar
+77	Walkeshwar	South Mumbai	Park	Convenience Store	Restaurant	Ice Cream Shop	Lighthouse	Indian Restaurant	Food & Drink Shop	Coffee Shop	Food Truck	Dessert Shop
+78	Worli	South Mumbai	Scenic Lookout	Indian Restaurant	Sandwich Place	Ice Cream Shop	Convenience Store	Garden	Bus Station	Bakery	Dessert Shop	Coffee Shop
+81	Navy Nagar	South Mumbai	Park	Ice Cream Shop	Grocery Store	Chinese Restaurant	Restaurant	Italian Restaurant	Asian Restaurant	Department Store	Pizza Place	Basketball Court
+89	Gowalia Tank	South Mumbai	Indian Restaurant	Café	Bakery	Coffee Shop	Pizza Place	Fast Food Restaurant	Snack Place	Chinese Restaurant	Ice Cream Shop	Theater
+Cluster 2
+mum_merged.loc[mum_merged['Cluster Labels'] == 1, mum_merged.columns[[0] + [1] + list(range(5, mum_merged.shape[1]))]]
+Neighborhood	Location	1st Most Common Venue	2nd Most Common Venue	3rd Most Common Venue	4th Most Common Venue	5th Most Common Venue	6th Most Common Venue	7th Most Common Venue	8th Most Common Venue	9th Most Common Venue	10th Most Common Venue
+0	Amboli	Western Suburbs	Indian Restaurant	Coffee Shop	Bakery	Bar	Asian Restaurant	Pizza Place	Sandwich Place	Bowling Alley	Bus Station	Bike Rental / Bike Share
+1	Chakala, Andheri	Western Suburbs	Hotel	Indian Restaurant	Café	Fast Food Restaurant	Pizza Place	Asian Restaurant	Hotel Bar	Vegetarian / Vegan Restaurant	Restaurant	Gym
+5	Marol	Western Suburbs	Indian Restaurant	Hotel	Diner	Bakery	Dance Studio	Ice Cream Shop	Chinese Restaurant	Fast Food Restaurant	Restaurant	Lounge
+9	Mira Road	Western Suburbs	Indian Restaurant	Convenience Store	Coffee Shop	Mexican Restaurant	Fast Food Restaurant	Food Truck	Motorcycle Shop	Movie Theater	Basketball Court	Bar
+15	I.C. Colony	Western Suburbs	Indian Restaurant	Chinese Restaurant	Fast Food Restaurant	Coffee Shop	Bar	Dessert Shop	Pizza Place	Juice Bar	Basketball Court	Soccer Field
+18	Aarey Milk Colony	Western Suburbs	Fast Food Restaurant	Indian Restaurant	Vegetarian / Vegan Restaurant	Shopping Mall	Breakfast Spot	Snack Place	Bookstore	Coffee Shop	Donut Shop	Bar
+19	Bangur Nagar	Western Suburbs	Coffee Shop	Indian Restaurant	Clothing Store	Multiplex	Fast Food Restaurant	Pizza Place	Electronics Store	Smoke Shop	Middle Eastern Restaurant	Pub
+20	Jogeshwari West	Western Suburbs	Indian Restaurant	Men's Store	Asian Restaurant	Fried Chicken Joint	Mughlai Restaurant	Café	Chinese Restaurant	Smoke Shop	Flea Market	Ice Cream Shop
+21	Juhu	Western Suburbs	Indian Restaurant	Coffee Shop	Flower Shop	Shopping Mall	Fast Food Restaurant	Vegetarian / Vegan Restaurant	Movie Theater	Café	Lounge	Breakfast Spot
+23	Poisar	Western Suburbs	Indian Restaurant	Train Station	Dessert Shop	Sandwich Place	Food	Electronics Store	Fast Food Restaurant	Men's Store	Mexican Restaurant	Snack Place
+29	Sunder Nagar	Western Suburbs	Indian Restaurant	Coffee Shop	Fast Food Restaurant	Bakery	Movie Theater	Café	Breakfast Spot	Pizza Place	Restaurant	Flower Shop
+30	Kalina	Western Suburbs	Indian Restaurant	Pet Store	Snack Place	Lounge	Bus Station	Food & Drink Shop	Chinese Restaurant	Juice Bar	Sandwich Place	Coffee Shop
+31	Naigaon	Western Suburbs	Indian Restaurant	Coffee Shop	Café	Fast Food Restaurant	Flower Shop	Lounge	Juice Bar	Food Truck	Spa	Snack Place
+34	Irla	Western Suburbs	Indian Restaurant	Coffee Shop	Café	Bakery	Chinese Restaurant	Fast Food Restaurant	Electronics Store	Scenic Lookout	Snack Place	Clothing Store
+35	Vile Parle	Western Suburbs	Indian Restaurant	Café	Coffee Shop	Hotel	Sandwich Place	Tea Room	Fast Food Restaurant	Bar	Snack Place	Donut Shop
+37	Amrut Nagar	Eastern Suburbs	Indian Restaurant	Flea Market	Smoke Shop	Fried Chicken Joint	Café	Mughlai Restaurant	Multiplex	Men's Store	Plaza	Tea Room
+39	Pant Nagar	Eastern Suburbs	Indian Restaurant	Coffee Shop	Pizza Place	Gym / Fitness Center	Bus Station	Juice Bar	Bank	Bakery	Café	Restaurant
+42	Nahur	Eastern Suburbs	Restaurant	Train Station	Bus Station	Pub	Coffee Shop	Indian Restaurant	Pizza Place	Fast Food Restaurant	Falafel Restaurant	Farm
+43	Chandivali	Eastern Suburbs	Indian Restaurant	Fast Food Restaurant	Restaurant	Café	Hotel	Pub	Bar	Shopping Mall	Food	Sandwich Place
+45	Indian Institute of Technology Bombay campus	Eastern Suburbs	Indian Restaurant	Restaurant	Café	Pizza Place	Bar	Chinese Restaurant	Department Store	Bakery	Italian Restaurant	Asian Restaurant
+46	Vidyavihar	Eastern Suburbs	Indian Restaurant	Café	Coffee Shop	Bar	Vegetarian / Vegan Restaurant	Fast Food Restaurant	Chinese Restaurant	Movie Theater	Ice Cream Shop	Breakfast Spot
+48	Chembur	Harbour Suburbs	Indian Restaurant	Café	Pizza Place	Fast Food Restaurant	Coffee Shop	Garden	Asian Restaurant	Seafood Restaurant	Vegetarian / Vegan Restaurant	Gym
+51	Mahul	Harbour Suburbs	Indian Restaurant	Fast Food Restaurant	Gym	Bar	Cosmetics Shop	Pizza Place	Coffee Shop	Pool	Music Store	Diner
+52	Agripada	South Mumbai	Indian Restaurant	Fast Food Restaurant	Bakery	Gym	Coffee Shop	Zoo	Movie Theater	Donut Shop	Nightclub	Department Store
+54	Bhuleshwar	South Mumbai	Indian Restaurant	Café	Market	Fast Food Restaurant	Bakery	BBQ Joint	Ice Cream Shop	Dessert Shop	Train Station	Music Store
+57	Cavel	South Mumbai	Indian Restaurant	Bakery	Café	Market	Fast Food Restaurant	Chinese Restaurant	Restaurant	Snack Place	Smoke Shop	Food Truck
+58	Churchgate	South Mumbai	Indian Restaurant	Coffee Shop	Café	Fast Food Restaurant	Cricket Ground	Italian Restaurant	Bar	Bakery	Chinese Restaurant	Ice Cream Shop
+62	Currey Road	South Mumbai	Indian Restaurant	Coffee Shop	Dessert Shop	Chinese Restaurant	Italian Restaurant	Hotel	Café	Clothing Store	Fast Food Restaurant	Lounge
+63	Dhobitalao	South Mumbai	Indian Restaurant	Train Station	Café	Bakery	Bar	Cricket Ground	Multiplex	Chinese Restaurant	Coffee Shop	Athletics & Sports
+64	Dongri	South Mumbai	Indian Restaurant	Dessert Shop	Chinese Restaurant	BBQ Joint	Juice Bar	Restaurant	Café	Food Truck	Garden	Music Venue
+65	Kala Ghoda	South Mumbai	Indian Restaurant	Café	Coffee Shop	Bar	Hotel	Seafood Restaurant	Dessert Shop	Fast Food Restaurant	Bakery	Japanese Restaurant
+68	Mahalaxmi	South Mumbai	Indian Restaurant	Café	Bakery	Fast Food Restaurant	Restaurant	Cricket Ground	Chinese Restaurant	Bar	Soccer Field	Pizza Place
+69	Mahim	South Mumbai	Fast Food Restaurant	Indian Restaurant	Bakery	Café	Chinese Restaurant	Hotel Bar	Dessert Shop	Arcade	Beach	Breakfast Spot
+70	Malabar Hill	South Mumbai	Coffee Shop	Convenience Store	Park	Ice Cream Shop	Lighthouse	Indian Restaurant	Dessert Shop	Zoo	Factory	Falafel Restaurant
+71	Marine Drive	South Mumbai	Indian Restaurant	Fast Food Restaurant	Cricket Ground	Train Station	Bakery	Café	Food Truck	Food	Italian Restaurant	Indie Movie Theater
+72	Marine Lines	South Mumbai	Indian Restaurant	Café	Bakery	Gastropub	Cricket Ground	Train Station	Bar	Lounge	Sandwich Place	Italian Restaurant
+76	Sion	South Mumbai	Indian Restaurant	Vegetarian / Vegan Restaurant	Dance Studio	Train Station	Seafood Restaurant	Gym / Fitness Center	Electronics Store	Juice Bar	Garden	Snack Place
+79	C.G.S. colony	South Mumbai	Multiplex	Indian Restaurant	Train Station	Pizza Place	Café	Fried Chicken Joint	Chinese Restaurant	Tea Room	Big Box Store	Sports Bar
+80	Dagdi Chawl	South Mumbai	Indian Restaurant	Sandwich Place	Hotel	Café	Tea Room	Gym	Fast Food Restaurant	Snack Place	Food Truck	Electronics Store
+82	Hindu colony	South Mumbai	Indian Restaurant	Café	Fast Food Restaurant	Vegetarian / Vegan Restaurant	Coffee Shop	Chinese Restaurant	Snack Place	Breakfast Spot	Bar	Movie Theater
+83	Ballard Estate	South Mumbai	Indian Restaurant	Café	Coffee Shop	Seafood Restaurant	Parsi Restaurant	Plaza	Bar	Chinese Restaurant	Lounge	Fast Food Restaurant
+84	Chira Bazaar	South Mumbai	Indian Restaurant	Café	Bakery	Fast Food Restaurant	Restaurant	Cheese Shop	Juice Bar	Market	Italian Restaurant	Pizza Place
+85	Fanas Wadi	South Mumbai	Indian Restaurant	Fast Food Restaurant	Café	Train Station	Ice Cream Shop	Coffee Shop	Bakery	Juice Bar	Chinese Restaurant	Restaurant
+86	Chor Bazaar	South Mumbai	Indian Restaurant	Dessert Shop	BBQ Joint	Smoke Shop	Café	Donut Shop	Restaurant	Bus Station	Fast Food Restaurant	Music Venue
+87	Matunga	South Mumbai	Indian Restaurant	Fast Food Restaurant	Snack Place	Café	Chinese Restaurant	Vegetarian / Vegan Restaurant	Ice Cream Shop	South Indian Restaurant	Bar	Train Station
+88	Parel	South Mumbai	Indian Restaurant	Coffee Shop	Lounge	Restaurant	Roof Deck	Plaza	Bar	Chinese Restaurant	Maharashtrian Restaurant	Hotel
+91	Dharavi	Mumbai	Indian Restaurant	Snack Place	Shoe Store	Boutique	Market	Sandwich Place	Fast Food Restaurant	Lake	Café	Garden
+Cluster 3
+mum_merged.loc[mum_merged['Cluster Labels'] == 2, mum_merged.columns[[0] + [1] + list(range(5, mum_merged.shape[1]))]]
+Neighborhood	Location	1st Most Common Venue	2nd Most Common Venue	3rd Most Common Venue	4th Most Common Venue	5th Most Common Venue	6th Most Common Venue	7th Most Common Venue	8th Most Common Venue	9th Most Common Venue	10th Most Common Venue
+36	Bhandup	Eastern Suburbs	Train Station	Indian Restaurant	Fast Food Restaurant	Asian Restaurant	Zoo	Donut Shop	Flea Market	Fish Market	Fish & Chips Shop	Field
+40	Kanjurmarg	Eastern Suburbs	Train Station	Gift Shop	Gym	Multiplex	Asian Restaurant	Chinese Restaurant	Cupcake Shop	Hotel	Field	Fast Food Restaurant
+90	Dava Bazaar	South Mumbai	Train Station	Indian Restaurant	Cupcake Shop	Hotel	Fish Market	Café	Fast Food Restaurant	Coffee Shop	Asian Restaurant	Smoke Shop
+Cluster 4
+mum_merged.loc[mum_merged['Cluster Labels'] == 3, mum_merged.columns[[0] + [1] + list(range(5, mum_merged.shape[1]))]]
+Neighborhood	Location	1st Most Common Venue	2nd Most Common Venue	3rd Most Common Venue	4th Most Common Venue	5th Most Common Venue	6th Most Common Venue	7th Most Common Venue	8th Most Common Venue	9th Most Common Venue	10th Most Common Venue
+50	Mankhurd	Harbour Suburbs	Train Station	Coffee Shop	Sports Bar	Bus Station	Zoo	Electronics Store	Fish Market	Fish & Chips Shop	Field	Fast Food Restaurant
+Cluster 5
+mum_merged.loc[mum_merged['Cluster Labels'] == 4, mum_merged.columns[[0] + [1] + list(range(5, mum_merged.shape[1]))]]
+Neighborhood	Location	1st Most Common Venue	2nd Most Common Venue	3rd Most Common Venue	4th Most Common Venue	5th Most Common Venue	6th Most Common Venue	7th Most Common Venue	8th Most Common Venue	9th Most Common Venue	10th Most Common Venue
+92	Thane	Mumbai	Pizza Place	Performing Arts Venue	Fast Food Restaurant	Dive Bar	Fish Market	Fish & Chips Shop	Field	Farmers Market	Farm	Falafel Restaurant
+Results and Discussion
+By analyzing the five clusters obtained we can see that some of the clusters are more suited for restaurants and hotels, whereas, other clusters are less suited. Neighborhoods in clusters 3, 4, and 5 contain a small percentage of restaurants, hotels, cafe and pubs in their top 10 common venues. These clusters contain a higher degree of other venues like train station, bus station, fish market, gym, performing arts venue and smoke shop, to name a few. Thus, they are not well suited for opening a new restaurant. On the other hand, neighborhoods in clusters 1 and 2 contain a much higher degree of restaurants, hotels, multiplex, cafes, bars and other food joints. Thus, the neighborhoods in these clusters would be well suited for opening a new restaurant.
+
+Comparing clusters 1 and 2, neighborhoods in cluster 1 seem to be more suited for starting a restaurant since they contains a larger percentage of food joints in the top 10 most common venues than cluster 2. The neighborhoods in cluster 1 contain a variety of food joints like restaurants, tea rooms, bakery, cafe, steakhouse and pubs and also contain very diverse cuisines like Japanese, Indian, Chinese, Italian and seafood restaurants. Most neighborhoods in cluster 2 seem to have Indian Restaurant as their top most common venue; however, on careful analysis we can see that neighborhoods in cluster 2 also contain other venues like soccer field, flea market, smoke shop, gym, train station, dance studio, music store, cosmetics shop and so on. Thus, it is recommended that the new restaurant can be opened in the neighborhoods belonging to cluster 1. This neighborhood can be further plotted on a map as shown below.
+
+new_restaurant_neighborhoods = mum_merged.loc[mum_merged['Cluster Labels'] == 0, mum_merged.columns[[0, 1, 2, 3] + list(range(5, mum_merged.shape[1]))]]
+new_restaurant_neighborhoods.head()
+Neighborhood	Location	Latitude	Longitude	1st Most Common Venue	2nd Most Common Venue	3rd Most Common Venue	4th Most Common Venue	5th Most Common Venue	6th Most Common Venue	7th Most Common Venue	8th Most Common Venue	9th Most Common Venue	10th Most Common Venue
+2	D.N. Nagar	Western Suburbs	19.1241	72.8325	Bar	Indian Restaurant	Pub	Gym / Fitness Center	Pizza Place	Lounge	Coffee Shop	Vegetarian / Vegan Restaurant	Snack Place	Gym
+3	Four Bungalows	Western Suburbs	19.1263	72.8243	Pub	Café	Indian Restaurant	Gym / Fitness Center	Chinese Restaurant	Bar	Seafood Restaurant	Lounge	Vegetarian / Vegan Restaurant	Coffee Shop
+4	Lokhandwala	Western Suburbs	19.1432	72.8249	Indian Restaurant	Chinese Restaurant	Café	Pub	Bakery	Bar	Italian Restaurant	Gym / Fitness Center	Coffee Shop	Asian Restaurant
+6	Sahar	Western Suburbs	19.1027	72.8626	Hotel	Café	Indian Restaurant	Lounge	Gym	Asian Restaurant	Pizza Place	Seafood Restaurant	Restaurant	Falafel Restaurant
+7	Seven Bungalows	Western Suburbs	19.1315	72.817	Café	Pub	Seafood Restaurant	Chinese Restaurant	Pizza Place	Coffee Shop	Bar	Ice Cream Shop	Asian Restaurant	Bistro
+map_res_locations = folium.Map(location=[latitude, longitude], zoom_start=10)
+
+for lat, lng, location, neighborhood in zip(new_restaurant_neighborhoods['Latitude'], new_restaurant_neighborhoods['Longitude'],
+                                            new_restaurant_neighborhoods['Location'], new_restaurant_neighborhoods['Neighborhood']):
+    label = '{}, {}'.format(neighborhood, location)
+    folium.Marker([lat, lng], popup='{} has geographical coordinates ({:.4f}, {:.4f})'.format(label, lat, lng),
+                  icon=folium.Icon(color='lightred'), tooltip=label).add_to(map_res_locations)
+    
+    label = folium.Popup(label, parse_html=True)
+    folium.CircleMarker(
+        [lat, lng],
+        radius=5,
+        popup=label,
+        color='yellow',
+        fill=True,
+        fill_color='#3186cc',
+        fill_opacity=0.7,
+        parse_html=False).add_to(map_res_locations) 
+
+map_res_locations
+Make this Notebook Trusted to load map: File -> Trust Notebook
+Conclusion
+We have successfully analyzed the neighborhoods in Mumbai, India for determining which would be the best neighborhoods for opening a new restaurant. Based on our analysis, neighborhoods in cluster 1 are recommended as locations for the new restaurant. This has also been plotted in the map above. The stakeholders and investors can further tune this by considering various other factors like transport, legal requirements, and costs associated. These were out of the scope for this project and thus were not considered.
+
+Note: If the maps are not visible, kindly check out the code at:
+https://eu-gb.dataplatform.cloud.ibm.com/analytics/notebooks/v2/b30b93d0-c65b-44ed-a7a0-d0ea04b70319/view?access_token=a87a756738ca48c5b2dff14409825e28ac243dfcd911ec0bbb7608c931eae100
+
+Thank You!
+ 
